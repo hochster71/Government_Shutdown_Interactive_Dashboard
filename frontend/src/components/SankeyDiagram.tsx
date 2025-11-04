@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import * as d3 from 'd3'
-import { sankey, sankeyLinkHorizontal } from 'd3-sankey'
+import { sankey, sankeyLinkHorizontal, SankeyNode } from 'd3-sankey'
 
 /**
  * Sankey Diagram Component
@@ -20,6 +20,17 @@ interface SankeyDiagramProps {
   shutdowns: ShutdownData[]
 }
 
+interface CustomNode {
+  name: string
+  category?: string
+}
+
+interface CustomLink {
+  source: number
+  target: number
+  value: number
+}
+
 function SankeyDiagram({ shutdowns }: SankeyDiagramProps) {
   const svgRef = useRef<SVGSVGElement>(null)
 
@@ -34,8 +45,8 @@ function SankeyDiagram({ shutdowns }: SankeyDiagramProps) {
     const margin = { top: 20, right: 20, bottom: 20, left: 20 }
 
     // Prepare Sankey data
-    const nodes: Array<{ name: string; category?: string }> = []
-    const links: Array<{ source: number; target: number; value: number }> = []
+    const nodes: CustomNode[] = []
+    const links: CustomLink[] = []
 
     // Define categories
     const causes = ['Budget Dispute', 'Policy Disagreement', 'Partisan Conflict']
@@ -75,7 +86,7 @@ function SankeyDiagram({ shutdowns }: SankeyDiagramProps) {
     })
 
     // Create Sankey generator
-    const sankeyGenerator = sankey()
+    const sankeyGenerator = sankey<CustomNode, CustomLink>()
       .nodeWidth(15)
       .nodePadding(20)
       .extent([[margin.left, margin.top], [width - margin.right, height - margin.bottom]])
@@ -121,25 +132,25 @@ function SankeyDiagram({ shutdowns }: SankeyDiagramProps) {
       .append('g')
 
     node.append('rect')
-      .attr('x', d => d.x0 || 0)
-      .attr('y', d => d.y0 || 0)
-      .attr('height', d => (d.y1 || 0) - (d.y0 || 0))
-      .attr('width', d => (d.x1 || 0) - (d.x0 || 0))
-      .attr('fill', d => colorScale(d.category || 'default') as string)
+      .attr('x', d => (d as SankeyNode<CustomNode, CustomLink>).x0 || 0)
+      .attr('y', d => (d as SankeyNode<CustomNode, CustomLink>).y0 || 0)
+      .attr('height', d => ((d as SankeyNode<CustomNode, CustomLink>).y1 || 0) - ((d as SankeyNode<CustomNode, CustomLink>).y0 || 0))
+      .attr('width', d => ((d as SankeyNode<CustomNode, CustomLink>).x1 || 0) - ((d as SankeyNode<CustomNode, CustomLink>).x0 || 0))
+      .attr('fill', d => colorScale((d as SankeyNode<CustomNode, CustomLink>).category || 'default') as string)
       .attr('opacity', 0.8)
       .attr('stroke', '#1e2530')
       .attr('stroke-width', 2)
 
     // Add labels
     node.append('text')
-      .attr('x', d => ((d.x0 || 0) < width / 2) ? (d.x1 || 0) + 6 : (d.x0 || 0) - 6)
-      .attr('y', d => ((d.y1 || 0) + (d.y0 || 0)) / 2)
+      .attr('x', d => (((d as SankeyNode<CustomNode, CustomLink>).x0 || 0) < width / 2) ? ((d as SankeyNode<CustomNode, CustomLink>).x1 || 0) + 6 : ((d as SankeyNode<CustomNode, CustomLink>).x0 || 0) - 6)
+      .attr('y', d => (((d as SankeyNode<CustomNode, CustomLink>).y1 || 0) + ((d as SankeyNode<CustomNode, CustomLink>).y0 || 0)) / 2)
       .attr('dy', '0.35em')
-      .attr('text-anchor', d => ((d.x0 || 0) < width / 2) ? 'start' : 'end')
+      .attr('text-anchor', d => (((d as SankeyNode<CustomNode, CustomLink>).x0 || 0) < width / 2) ? 'start' : 'end')
       .attr('fill', '#e4e6eb')
       .style('font-size', '12px')
       .style('font-weight', '500')
-      .text(d => d.name)
+      .text(d => (d as SankeyNode<CustomNode, CustomLink>).name)
 
   }, [shutdowns])
 

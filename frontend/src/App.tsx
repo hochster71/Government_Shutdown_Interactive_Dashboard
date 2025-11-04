@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import Dashboard from './components/Dashboard'
 
 /**
@@ -7,8 +6,6 @@ import Dashboard from './components/Dashboard'
  * Created by Michael Hoch
  */
 function App() {
-  const [darkMode] = useState(true) // Always use dark mode for this theme
-
   return (
     <div className="app" style={{ minHeight: '100vh' }}>
       <header style={{

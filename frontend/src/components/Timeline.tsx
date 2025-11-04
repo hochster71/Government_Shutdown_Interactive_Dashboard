@@ -168,7 +168,7 @@ function Timeline({ shutdowns }: TimelineProps) {
       })
       .transition()
       .duration(800)
-      .delay((d, i) => i * 50)
+      .delay((_d, i) => i * 50)
       .attr('r', 6)
 
     // Cleanup tooltip on unmount
