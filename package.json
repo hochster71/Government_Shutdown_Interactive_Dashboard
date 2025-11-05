@@ -1,0 +1,33 @@
+{
+  "name": "government-shutdown-dashboard",
+  "version": "1.0.0",
+  "description": "Interactive dashboard for US Government Shutdown data visualization - Dark Theme by Michael Hoch",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "install:all": "npm install && npm install --workspace=backend && npm install --workspace=frontend",
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:backend": "npm run build --workspace=backend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "build": "npm run build:backend && npm run build:frontend",
+    "start": "npm run start --workspace=backend"
+  },
+  "keywords": [
+    "government",
+    "shutdown",
+    "dashboard",
+    "visualization",
+    "d3",
+    "react"
+  ],
+  "author": "Michael Hoch",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
