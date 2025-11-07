@@ -6,9 +6,14 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+permissions:
+  contents: read
+
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       matrix:
         node-version: [18.x]
@@ -36,6 +41,8 @@ jobs:
 
   frontend-tests:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       matrix:
         node-version: [18.x]
@@ -61,6 +68,8 @@ jobs:
 
   integration-tests:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: [backend-tests, frontend-tests]
     strategy:
       matrix:
@@ -119,6 +128,8 @@ jobs:
 
   security-check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       matrix:
         node-version: [18.x]

@@ -21,7 +21,19 @@ const cache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
 
 // Security Middleware - Helmet
 app.use(helmet({
-  contentSecurityPolicy: NODE_ENV === 'production' ? undefined : false,
+  contentSecurityPolicy: NODE_ENV === 'production' ? {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    }
+  } : false,
   crossOriginEmbedderPolicy: NODE_ENV === 'production' ? true : false
 }));
 
