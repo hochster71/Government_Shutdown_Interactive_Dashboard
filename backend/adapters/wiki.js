@@ -7,6 +7,61 @@ import * as cheerio from 'cheerio';
  */
 
 const WIKI_URL = 'https://en.wikipedia.org/wiki/Government_shutdowns_in_the_United_States';
+const MAX_ROWS = 100; // Limit number of rows parsed to prevent DoS
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
+
+/**
+ * Fetch data with retry logic and exponential backoff
+ */
+async function fetchWithRetry(url, retries = MAX_RETRIES) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      const response = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Government-Shutdown-Dashboard/1.0 (Educational Purpose)'
+        },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      if (i === retries - 1) throw error;
+      
+      const delay = RETRY_DELAY * Math.pow(2, i);
+      console.warn(`Retry ${i + 1}/${retries} after ${delay}ms due to:`, error.message);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+}
+
+/**
+ * Validate and parse date string
+ */
+function validateDate(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string') {
+    console.warn('Invalid date string:', dateStr);
+    return false;
+  }
+  
+  // Check if date contains expected patterns
+  const datePatterns = [
+    /\d{4}/, // Year
+    /(January|February|March|April|May|June|July|August|September|October|November|December)/i, // Month name
+    /\d{1,2}/ // Day
+  ];
+  
+  const hasValidPattern = datePatterns.some(pattern => pattern.test(dateStr));
+  if (!hasValidPattern) {
+    console.warn('Date does not match expected patterns:', dateStr);
+  }
+  
+  return hasValidPattern;
+}
 
 /**
  * Fetch and parse government shutdown data from Wikipedia
@@ -14,19 +69,16 @@ const WIKI_URL = 'https://en.wikipedia.org/wiki/Government_shutdowns_in_the_Unit
  */
 export async function fetchShutdowns() {
   try {
-    const response = await axios.get(WIKI_URL, {
-      headers: {
-        'User-Agent': 'Government-Shutdown-Dashboard/1.0 (Educational Purpose)'
-      },
-      timeout: 10000
-    });
-
+    const response = await fetchWithRetry(WIKI_URL);
     const $ = cheerio.load(response.data);
     const shutdowns = [];
+    let rowCount = 0;
 
     // Find the main table containing shutdown data
     // The Wikipedia page has tables with shutdown information
     $('table.wikitable').each((tableIndex, table) => {
+      if (rowCount >= MAX_ROWS) return false; // Stop if limit reached
+      
       const headers = [];
       
       // Extract headers
@@ -38,12 +90,22 @@ export async function fetchShutdowns() {
       if (headers.some(h => h.toLowerCase().includes('date') || h.toLowerCase().includes('duration'))) {
         // Extract data rows
         $(table).find('tr').slice(1).each((rowIndex, row) => {
+          if (rowCount >= MAX_ROWS) return false; // Stop if limit reached
+          
           const cells = $(row).find('td');
           
           if (cells.length >= 3) {
+            const dateStr = $(cells[0]).text().trim();
+            
+            // Validate date before adding
+            if (!validateDate(dateStr)) {
+              console.warn('Skipping row with invalid date:', dateStr);
+              return; // Skip this row
+            }
+            
             const shutdown = {
               id: shutdowns.length + 1,
-              date: $(cells[0]).text().trim(),
+              date: dateStr,
               duration: $(cells[1]).text().trim(),
               president: $(cells[2]).text().trim(),
               congress: cells.length > 3 ? $(cells[3]).text().trim() : '',
@@ -53,6 +115,7 @@ export async function fetchShutdowns() {
             };
             
             shutdowns.push(shutdown);
+            rowCount++;
           }
         });
       }
@@ -60,9 +123,11 @@ export async function fetchShutdowns() {
 
     // If no data found in tables, create sample historical data
     if (shutdowns.length === 0) {
+      console.warn('No shutdown data found in Wikipedia, using fallback data');
       return getSampleShutdownData();
     }
 
+    console.log(`Successfully parsed ${shutdowns.length} shutdown records from Wikipedia`);
     return shutdowns;
   } catch (error) {
     console.error('Error fetching Wikipedia data:', error.message);

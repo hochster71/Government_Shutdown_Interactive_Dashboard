@@ -7,6 +7,30 @@ import axios from 'axios';
 
 const NEWS_API_BASE_URL = 'https://newsapi.org/v2';
 const DEFAULT_QUERY = 'government shutdown OR federal shutdown';
+const REQUEST_TIMEOUT = 10000; // 10 seconds
+
+/**
+ * Make request with timeout using AbortController
+ */
+async function fetchWithTimeout(url, params, timeout = REQUEST_TIMEOUT) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await axios.get(url, {
+      params,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
+      throw new Error('Request timeout');
+    }
+    throw error;
+  }
+}
 
 /**
  * Fetch news articles about government shutdowns
@@ -29,15 +53,12 @@ export async function fetchNews(apiKey, options = {}) {
     const language = options.language || 'en';
     const sortBy = options.sortBy || 'publishedAt';
 
-    const response = await axios.get(`${NEWS_API_BASE_URL}/everything`, {
-      params: {
-        q: query,
-        pageSize,
-        language,
-        sortBy,
-        apiKey
-      },
-      timeout: 10000
+    const response = await fetchWithTimeout(`${NEWS_API_BASE_URL}/everything`, {
+      q: query,
+      pageSize,
+      language,
+      sortBy,
+      apiKey
     });
 
     if (response.data.status === 'ok') {
@@ -67,7 +88,7 @@ export async function fetchNews(apiKey, options = {}) {
     // Return graceful fallback
     return {
       articles: [],
-      message: error.response?.data?.message || 'Unable to fetch news. Please try again later.',
+      message: error.response?.data?.message || error.message || 'Unable to fetch news. Please try again later.',
       error: error.message,
       totalResults: 0
     };
@@ -94,14 +115,11 @@ export async function fetchTopHeadlines(apiKey, options = {}) {
     const country = options.country || 'us';
     const pageSize = options.pageSize || 10;
 
-    const response = await axios.get(`${NEWS_API_BASE_URL}/top-headlines`, {
-      params: {
-        category,
-        country,
-        pageSize,
-        apiKey
-      },
-      timeout: 10000
+    const response = await fetchWithTimeout(`${NEWS_API_BASE_URL}/top-headlines`, {
+      category,
+      country,
+      pageSize,
+      apiKey
     });
 
     if (response.data.status === 'ok') {
@@ -129,7 +147,7 @@ export async function fetchTopHeadlines(apiKey, options = {}) {
     
     return {
       articles: [],
-      message: error.response?.data?.message || 'Unable to fetch headlines.',
+      message: error.response?.data?.message || error.message || 'Unable to fetch headlines.',
       error: error.message,
       totalResults: 0
     };

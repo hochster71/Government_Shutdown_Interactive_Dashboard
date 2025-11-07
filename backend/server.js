@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { body, query, validationResult } from 'express-validator';
 import NodeCache from 'node-cache';
 import dotenv from 'dotenv';
 import { fetchShutdowns } from './adapters/wiki.js';
@@ -11,18 +13,44 @@ dotenv.config({ path: '../.env' });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
 
 // Initialize cache (TTL: 1 hour = 3600 seconds)
 const cache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
 
-// Middleware
+// Security Middleware - Helmet
+app.use(helmet({
+  contentSecurityPolicy: NODE_ENV === 'production' ? undefined : false,
+  crossOriginEmbedderPolicy: NODE_ENV === 'production' ? true : false
+}));
+
+// CORS Middleware - Tightened for production
 app.use(cors({
-  origin: CORS_ORIGIN,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    
+    // In production, only allow configured origin
+    if (NODE_ENV === 'production') {
+      if (origin === ALLOWED_ORIGIN) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    } else {
+      // In development, allow configured origin
+      if (origin === ALLOWED_ORIGIN || origin === 'http://localhost:5173') {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    }
+  },
   credentials: true
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '100kb' })); // Limit body size
 
 // Rate limiting: max 100 requests per 15 minutes
 const limiter = rateLimit({
@@ -113,10 +141,23 @@ app.get('/api/shutdowns', async (req, res) => {
 /**
  * GET /api/news
  * Proxies requests to NewsAPI for government shutdown news
- * Query params: query, pageSize, sortBy
+ * Query params: query, pageSize, sortBy (validated)
  */
-app.get('/api/news', async (req, res) => {
+app.get('/api/news', [
+  query('query').optional().isString().trim().isLength({ max: 500 }).escape(),
+  query('pageSize').optional().isInt({ min: 1, max: 100 }).toInt(),
+  query('sortBy').optional().isIn(['publishedAt', 'relevancy', 'popularity'])
+], async (req, res) => {
   try {
+    // Validate input
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        error: 'Invalid input parameters',
+        details: errors.array() 
+      });
+    }
+
     const apiKey = process.env.NEWSAPI_KEY;
     const cacheKey = `news_${req.query.query || 'default'}`;
     
@@ -149,9 +190,12 @@ app.get('/api/news', async (req, res) => {
     });
   } catch (error) {
     console.error('Error in /api/news:', error);
+    const message = NODE_ENV === 'production' 
+      ? 'Failed to fetch news'
+      : error.message;
     res.status(500).json({
       error: 'Failed to fetch news',
-      message: error.message,
+      message,
       articles: []
     });
   }
@@ -225,13 +269,22 @@ app.get('/api/govinfo/:type', (req, res) => {
  * Calculate economic impact of a government shutdown
  * Body: { duration: number (days), affectedWorkers: number, year: number }
  */
-app.post('/api/impact/calc', (req, res) => {
+app.post('/api/impact/calc', [
+  body('duration').isInt({ min: 1, max: 365 }).withMessage('Duration must be between 1 and 365 days'),
+  body('affectedWorkers').optional().isInt({ min: 1000, max: 3000000 }).withMessage('Affected workers must be between 1,000 and 3,000,000'),
+  body('year').optional().isInt({ min: 1970, max: 2100 }).withMessage('Year must be between 1970 and 2100')
+], (req, res) => {
   try {
-    const { duration, affectedWorkers, year } = req.body;
-
-    if (!duration || duration <= 0) {
-      return res.status(400).json({ error: 'Duration must be a positive number' });
+    // Validate input
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        error: 'Invalid input parameters',
+        details: errors.array() 
+      });
     }
+
+    const { duration, affectedWorkers, year } = req.body;
 
     // Base calculations (simplified model)
     const avgDailyCostPerWorker = 400; // Average daily cost per federal worker
@@ -276,9 +329,12 @@ app.post('/api/impact/calc', (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Error in /api/impact/calc:', error);
+    const message = NODE_ENV === 'production' 
+      ? 'Failed to calculate impact'
+      : error.message;
     res.status(500).json({
       error: 'Failed to calculate impact',
-      message: error.message
+      message
     });
   }
 });
@@ -303,9 +359,15 @@ app.use((req, res) => {
 // Error handler
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
-  res.status(500).json({
+  
+  // Don't expose stack traces in production
+  const message = NODE_ENV === 'production' 
+    ? 'An error occurred while processing your request'
+    : err.message;
+  
+  res.status(err.status || 500).json({
     error: 'Internal Server Error',
-    message: err.message
+    message
   });
 });
 
@@ -313,7 +375,8 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`✅ Government Shutdown Dashboard API Server`);
   console.log(`🚀 Running on http://localhost:${PORT}`);
-  console.log(`📊 CORS enabled for: ${CORS_ORIGIN}`);
+  console.log(`📊 CORS enabled for: ${ALLOWED_ORIGIN}`);
+  console.log(`🔒 Environment: ${NODE_ENV}`);
   console.log(`🔑 NewsAPI: ${process.env.NEWSAPI_KEY ? 'Configured ✓' : 'Not configured (optional)'}`);
   console.log(`\n📚 Available endpoints:`);
   console.log(`   GET  /health`);
@@ -324,3 +387,5 @@ app.listen(PORT, () => {
   console.log(`   GET  /api/govinfo/:type`);
   console.log(`   POST /api/impact/calc`);
 });
+
+export default app;
