@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { apiPost } from '../utils/api'
 
 /**
  * Impact Calculator Component
@@ -26,6 +27,12 @@ interface ImpactResult {
   note: string
 }
 
+// Validation constants
+const VALIDATION_RULES = {
+  duration: { min: 1, max: 365 },
+  affectedWorkers: { min: 1000, max: 3000000 }
+};
+
 function ImpactCalculator() {
   const [duration, setDuration] = useState<number>(30)
   const [affectedWorkers, setAffectedWorkers] = useState<number>(800000)
@@ -33,34 +40,61 @@ function ImpactCalculator() {
   const [result, setResult] = useState<ImpactResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [validationErrors, setValidationErrors] = useState<{
+    duration?: string;
+    affectedWorkers?: string;
+  }>({})
+
+  // Validate inputs
+  const validateInputs = (): boolean => {
+    const errors: { duration?: string; affectedWorkers?: string } = {};
+
+    if (duration < VALIDATION_RULES.duration.min || duration > VALIDATION_RULES.duration.max) {
+      errors.duration = `Duration must be between ${VALIDATION_RULES.duration.min} and ${VALIDATION_RULES.duration.max} days`;
+    }
+
+    if (affectedWorkers < VALIDATION_RULES.affectedWorkers.min || affectedWorkers > VALIDATION_RULES.affectedWorkers.max) {
+      errors.affectedWorkers = `Affected workers must be between ${VALIDATION_RULES.affectedWorkers.min.toLocaleString()} and ${VALIDATION_RULES.affectedWorkers.max.toLocaleString()}`;
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleDurationChange = (value: number) => {
+    const clampedValue = Math.max(VALIDATION_RULES.duration.min, Math.min(VALIDATION_RULES.duration.max, value));
+    setDuration(clampedValue);
+    setValidationErrors({ ...validationErrors, duration: undefined });
+  };
+
+  const handleWorkersChange = (value: number) => {
+    const clampedValue = Math.max(VALIDATION_RULES.affectedWorkers.min, Math.min(VALIDATION_RULES.affectedWorkers.max, value));
+    setAffectedWorkers(clampedValue);
+    setValidationErrors({ ...validationErrors, affectedWorkers: undefined });
+  };
 
   const calculateImpact = async () => {
+    // Validate before submitting
+    if (!validateInputs()) {
+      setError('Please fix the validation errors before calculating');
+      return;
+    }
+
     try {
       setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/impact/calc', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          duration,
-          affectedWorkers,
-          year,
-        }),
-      })
+      const data = await apiPost<ImpactResult>('/api/impact/calc', {
+        duration,
+        affectedWorkers,
+        year,
+      });
 
-      if (!response.ok) {
-        throw new Error('Failed to calculate impact')
-      }
-
-      const data = await response.json()
       setResult(data)
       setLoading(false)
     } catch (err) {
       console.error('Error calculating impact:', err)
-      setError('Failed to calculate economic impact. Please try again.')
+      setError(err instanceof Error ? err.message : 'Failed to calculate economic impact. Please try again.')
       setLoading(false)
     }
   }
@@ -81,14 +115,19 @@ function ImpactCalculator() {
             min="1"
             max="365"
             value={duration}
-            onChange={(e) => setDuration(parseInt(e.target.value) || 1)}
+            onChange={(e) => handleDurationChange(parseInt(e.target.value) || 1)}
           />
+          {validationErrors.duration && (
+            <div style={{ color: 'var(--color-accent-red)', fontSize: '0.875rem', marginTop: 'var(--spacing-xs)' }}>
+              {validationErrors.duration}
+            </div>
+          )}
           <input
             type="range"
             min="1"
             max="90"
             value={duration}
-            onChange={(e) => setDuration(parseInt(e.target.value))}
+            onChange={(e) => handleDurationChange(parseInt(e.target.value))}
             style={{ width: '100%', marginTop: 'var(--spacing-sm)' }}
           />
         </div>
@@ -99,18 +138,23 @@ function ImpactCalculator() {
             id="workers"
             type="number"
             min="1000"
-            max="2000000"
+            max="3000000"
             step="10000"
             value={affectedWorkers}
-            onChange={(e) => setAffectedWorkers(parseInt(e.target.value) || 800000)}
+            onChange={(e) => handleWorkersChange(parseInt(e.target.value) || 800000)}
           />
+          {validationErrors.affectedWorkers && (
+            <div style={{ color: 'var(--color-accent-red)', fontSize: '0.875rem', marginTop: 'var(--spacing-xs)' }}>
+              {validationErrors.affectedWorkers}
+            </div>
+          )}
           <input
             type="range"
             min="100000"
             max="2000000"
             step="50000"
             value={affectedWorkers}
-            onChange={(e) => setAffectedWorkers(parseInt(e.target.value))}
+            onChange={(e) => handleWorkersChange(parseInt(e.target.value))}
             style={{ width: '100%', marginTop: 'var(--spacing-sm)' }}
           />
         </div>
