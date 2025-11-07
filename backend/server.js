@@ -372,20 +372,22 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`✅ Government Shutdown Dashboard API Server`);
-  console.log(`🚀 Running on http://localhost:${PORT}`);
-  console.log(`📊 CORS enabled for: ${ALLOWED_ORIGIN}`);
-  console.log(`🔒 Environment: ${NODE_ENV}`);
-  console.log(`🔑 NewsAPI: ${process.env.NEWSAPI_KEY ? 'Configured ✓' : 'Not configured (optional)'}`);
-  console.log(`\n📚 Available endpoints:`);
-  console.log(`   GET  /health`);
-  console.log(`   GET  /api/sources`);
-  console.log(`   GET  /api/shutdowns`);
-  console.log(`   GET  /api/news`);
-  console.log(`   GET  /api/news/headlines`);
-  console.log(`   GET  /api/govinfo/:type`);
-  console.log(`   POST /api/impact/calc`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`✅ Government Shutdown Dashboard API Server`);
+    console.log(`🚀 Running on http://localhost:${PORT}`);
+    console.log(`📊 CORS enabled for: ${ALLOWED_ORIGIN}`);
+    console.log(`🔒 Environment: ${NODE_ENV}`);
+    console.log(`🔑 NewsAPI: ${process.env.NEWSAPI_KEY ? 'Configured ✓' : 'Not configured (optional)'}`);
+    console.log(`\n📚 Available endpoints:`);
+    console.log(`   GET  /health`);
+    console.log(`   GET  /api/sources`);
+    console.log(`   GET  /api/shutdowns`);
+    console.log(`   GET  /api/news`);
+    console.log(`   GET  /api/news/headlines`);
+    console.log(`   GET  /api/govinfo/:type`);
+    console.log(`   POST /api/impact/calc`);
+  });
+}
 
 export default app;

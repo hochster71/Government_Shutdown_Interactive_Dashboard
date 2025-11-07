@@ -3,7 +3,6 @@
  * Provides centralized API calls with timeout and error handling
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const DEFAULT_TIMEOUT = 15000; // 15 seconds
 
 /**
