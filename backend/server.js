@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { body, query, validationResult } from 'express-validator';
 import NodeCache from 'node-cache';
@@ -19,7 +21,7 @@ const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
 // Initialize cache (TTL: 1 hour = 3600 seconds)
 const cache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
 
-// Security Middleware - Helmet
+// Security Middleware - Helmet with enhanced configuration
 app.use(helmet({
   contentSecurityPolicy: NODE_ENV === 'production' ? {
     directives: {
@@ -32,10 +34,38 @@ app.use(helmet({
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
       frameSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"],
+      upgradeInsecureRequests: [],
     }
   } : false,
-  crossOriginEmbedderPolicy: NODE_ENV === 'production' ? true : false
+  crossOriginEmbedderPolicy: NODE_ENV === 'production' ? true : false,
+  crossOriginOpenerPolicy: { policy: "same-origin" },
+  crossOriginResourcePolicy: { policy: "same-origin" },
+  dnsPrefetchControl: { allow: false },
+  frameguard: { action: 'deny' },
+  hidePoweredBy: true,
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  },
+  ieNoOpen: true,
+  noSniff: true,
+  originAgentCluster: true,
+  permittedCrossDomainPolicies: { permittedPolicies: "none" },
+  referrerPolicy: { policy: "no-referrer" },
+  xssFilter: true
 }));
+
+// Compression middleware for performance
+app.use(compression());
+
+// Request logging (only in development or if LOG_REQUESTS=true)
+if (NODE_ENV === 'development' || process.env.LOG_REQUESTS === 'true') {
+  app.use(morgan('combined'));
+}
 
 // CORS Middleware - Tightened for production
 app.use(cors({
@@ -59,10 +89,19 @@ app.use(cors({
       }
     }
   },
-  credentials: true
+  credentials: true,
+  maxAge: 600 // Cache preflight request for 10 minutes
 }));
 
 app.use(express.json({ limit: '100kb' })); // Limit body size
+app.use(express.urlencoded({ extended: true, limit: '100kb' })); // URL-encoded body parsing with limit
+
+// Security middleware to remove sensitive headers from responses
+app.use((req, res, next) => {
+  res.removeHeader('X-Powered-By');
+  res.removeHeader('Server');
+  next();
+});
 
 // Rate limiting: max 100 requests per 15 minutes
 const limiter = rateLimit({
@@ -71,9 +110,20 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  skipSuccessfulRequests: false,
+  skipFailedRequests: false,
 });
 
 app.use('/api/', limiter);
+
+// Stricter rate limiting for POST endpoints
+const postLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: 'Too many POST requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -217,10 +267,23 @@ app.get('/api/news', [
  * GET /api/news/headlines
  * Fetches top political headlines
  */
-app.get('/api/news/headlines', async (req, res) => {
+app.get('/api/news/headlines', [
+  query('category').optional().isIn(['business', 'entertainment', 'general', 'health', 'science', 'sports', 'technology', 'politics']),
+  query('country').optional().isAlpha().isLength({ min: 2, max: 2 }),
+  query('pageSize').optional().isInt({ min: 1, max: 100 }).toInt()
+], async (req, res) => {
   try {
+    // Validate input
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        error: 'Invalid input parameters',
+        details: errors.array() 
+      });
+    }
+
     const apiKey = process.env.NEWSAPI_KEY;
-    const cacheKey = 'headlines';
+    const cacheKey = `headlines_${req.query.category || 'politics'}_${req.query.country || 'us'}`;
     
     // Check cache
     const cachedData = cache.get(cacheKey);
@@ -264,8 +327,18 @@ app.get('/api/news/headlines', async (req, res) => {
  * Proxy endpoint for GovInfo.gov
  * This is a placeholder - actual implementation would require GovInfo API integration
  */
-app.get('/api/govinfo/:type', (req, res) => {
+app.get('/api/govinfo/:type', [
+  query('type').optional().isAlphanumeric().isLength({ max: 50 })
+], (req, res) => {
   const { type } = req.params;
+  
+  // Validate type parameter
+  if (!type || !/^[a-zA-Z0-9-_]+$/.test(type) || type.length > 50) {
+    return res.status(400).json({
+      error: 'Invalid type parameter',
+      message: 'Type must be alphanumeric and less than 50 characters'
+    });
+  }
   
   // Placeholder response
   res.json({
@@ -281,7 +354,7 @@ app.get('/api/govinfo/:type', (req, res) => {
  * Calculate economic impact of a government shutdown
  * Body: { duration: number (days), affectedWorkers: number, year: number }
  */
-app.post('/api/impact/calc', [
+app.post('/api/impact/calc', postLimiter, [
   body('duration').isInt({ min: 1, max: 365 }).withMessage('Duration must be between 1 and 365 days'),
   body('affectedWorkers').optional().isInt({ min: 1000, max: 3000000 }).withMessage('Affected workers must be between 1,000 and 3,000,000'),
   body('year').optional().isInt({ min: 1970, max: 2100 }).withMessage('Year must be between 1970 and 2100')
