@@ -20,14 +20,29 @@ An interactive, dark-themed dashboard for visualizing and analyzing US Governmen
 - **Vite** for fast development and building
 - **D3.js** for advanced data visualizations
 - **Chart.js** for interactive charts
+- **DOMPurify** for XSS protection
+- **Axios** with centralized API client
 - Custom dark theme CSS
 
 ### Backend
-- **Node.js** with Express
+- **Node.js 18+** with Express
+- **Helmet** for security headers (CSP, X-Frame-Options, etc.)
+- **Pino** for structured logging
+- **Express-validator** for input validation
 - **Cheerio** for web scraping Wikipedia data
 - **Node-cache** for efficient data caching
 - **Express-rate-limit** for API protection
+- Native fetch API with AbortController for timeouts
 - NewsAPI integration for real-time news
+
+### Security Features
+- 🔒 Content Security Policy (CSP) headers
+- 🛡️ Input validation and sanitization (client and server)
+- 🚫 XSS protection with DOMPurify
+- ⏱️ Request timeouts and rate limiting
+- 📝 Structured logging with sensitive data filtering
+- 🔐 CORS hardening for production
+- 🚦 Graceful error handling (no stack traces in production)
 
 ## Quick Start
 
@@ -136,7 +151,8 @@ All endpoints implement caching and rate limiting for optimal performance.
 - `NEWSAPI_KEY` - API key for NewsAPI (optional, but recommended)
 - `PORT` - Backend server port (default: 3001)
 - `NODE_ENV` - Environment mode (development/production)
-- `CORS_ORIGIN` - CORS allowed origin (default: http://localhost:5173)
+- `LOG_LEVEL` - Logging level: debug, info, warn, error (default: debug in dev, info in prod)
+- `ALLOWED_ORIGIN` - CORS allowed origin (required in production, default: http://localhost:5173 in dev)
 
 See `.env.example` for all available options.
 
@@ -146,6 +162,60 @@ The application works without API keys:
 - Without NewsAPI key: News feed shows informational message
 - API failures: Cached data is served with appropriate messaging
 - Network issues: User-friendly error messages with retry options
+
+## Testing
+
+### Backend Tests
+
+Run backend unit tests:
+```bash
+cd backend
+npm test
+```
+
+Run tests in watch mode:
+```bash
+cd backend
+npm run test:watch
+```
+
+### Frontend Build
+
+Build the frontend to check for TypeScript errors:
+```bash
+cd frontend
+npm run build
+```
+
+Lint the frontend code:
+```bash
+cd frontend
+npm run lint
+```
+
+### CI/CD
+
+This project includes a GitHub Actions workflow that automatically:
+- Runs backend tests
+- Builds and lints the frontend
+- Performs security audits
+
+The workflow runs on pushes to `main` and `feature/*` branches, and on pull requests.
+
+## Security Best Practices
+
+This application implements several security best practices:
+
+1. **Input Validation**: All user inputs are validated on both client and server
+2. **Output Sanitization**: DOMPurify sanitizes content before rendering
+3. **CSP Headers**: Content Security Policy prevents XSS attacks
+4. **Rate Limiting**: API endpoints are rate-limited to prevent abuse
+5. **Request Timeouts**: All external requests have timeouts to prevent hanging
+6. **CORS Hardening**: Production requires explicit origin configuration
+7. **Error Handling**: Stack traces are never exposed in production
+8. **Structured Logging**: Pino logger provides audit trails without leaking sensitive data
+9. **Dependency Security**: Regular audits via `npm audit`
+10. **Native Fetch**: Uses Node 18+ native fetch instead of third-party HTTP clients
 
 ## Data Sources
 

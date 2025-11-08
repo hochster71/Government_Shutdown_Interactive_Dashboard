@@ -1,4 +1,3 @@
-import axios from 'axios';
 import * as cheerio from 'cheerio';
 
 /**
@@ -7,47 +6,164 @@ import * as cheerio from 'cheerio';
  */
 
 const WIKI_URL = 'https://en.wikipedia.org/wiki/Government_shutdowns_in_the_United_States';
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+const MAX_ROWS = 100; // Limit parsed rows for safety
 
 /**
- * Fetch and parse government shutdown data from Wikipedia
+ * Fetch with timeout using AbortController
+ * @param {string} url - URL to fetch
+ * @param {number} timeout - Timeout in milliseconds
+ * @param {object} options - Fetch options
+ * @returns {Promise<Response>}
+ */
+async function fetchWithTimeout(url, timeout = 10000, options = {}) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
+
+/**
+ * Sleep for exponential backoff
+ * @param {number} ms - Milliseconds to sleep
+ * @returns {Promise<void>}
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Sanitize and escape text to prevent script injection
+ * Uses a more robust approach than regex to avoid incomplete sanitization
+ * @param {string} text - Text to sanitize
+ * @returns {string} Sanitized text
+ */
+function sanitizeText(text) {
+  if (!text || typeof text !== 'string') return '';
+  
+  // Trim and limit length first
+  let sanitized = text.trim().substring(0, 5000);
+  
+  // Remove all script and iframe tags with a comprehensive approach
+  // Keep removing until none are left (handles nested tags)
+  let prevLength = 0;
+  while (sanitized.length !== prevLength) {
+    prevLength = sanitized.length;
+    sanitized = sanitized
+      .replace(/<script[^>]*>.*?<\/script>/gis, '')
+      .replace(/<iframe[^>]*>.*?<\/iframe>/gis, '')
+      .replace(/<script[^>]*>/gi, '')
+      .replace(/<\/script>/gi, '')
+      .replace(/<iframe[^>]*>/gi, '')
+      .replace(/<\/iframe>/gi, '');
+  }
+  
+  // Remove all event handlers (comprehensive list)
+  const eventHandlers = [
+    'onclick', 'onload', 'onerror', 'onmouseover', 'onmouseout',
+    'onmousedown', 'onmouseup', 'onmousemove', 'onfocus', 'onblur',
+    'onchange', 'onsubmit', 'onkeydown', 'onkeyup', 'onkeypress',
+    'ondblclick', 'oncontextmenu', 'oninput', 'oninvalid', 'onreset',
+    'onsearch', 'onselect', 'ondrag', 'ondrop', 'oncopy', 'oncut', 'onpaste'
+  ];
+  
+  eventHandlers.forEach(handler => {
+    const pattern = new RegExp(`\\s*${handler}\\s*=\\s*["'][^"']*["']`, 'gi');
+    sanitized = sanitized.replace(pattern, '');
+    const pattern2 = new RegExp(`\\s*${handler}\\s*=\\s*[^\\s>]*`, 'gi');
+    sanitized = sanitized.replace(pattern2, '');
+  });
+  
+  return sanitized;
+}
+
+/**
+ * Validate and parse date string
+ * @param {string} dateStr - Date string to parse
+ * @returns {string|null} Validated date string or null
+ */
+function validateDate(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string') return null;
+  
+  const sanitized = sanitizeText(dateStr);
+  
+  // Check if it looks like a valid date format
+  const datePattern = /\d{4}|\d{1,2}[,\/\-]\s*\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December/i;
+  
+  if (datePattern.test(sanitized)) {
+    return sanitized;
+  }
+  
+  return null;
+}
+
+/**
+ * Fetch and parse government shutdown data from Wikipedia with retry logic
+ * @param {number} retryCount - Current retry attempt
  * @returns {Promise<Array>} Array of shutdown events
  */
-export async function fetchShutdowns() {
+async function fetchShutdownsWithRetry(retryCount = 0) {
   try {
-    const response = await axios.get(WIKI_URL, {
+    const response = await fetchWithTimeout(WIKI_URL, 10000, {
       headers: {
         'User-Agent': 'Government-Shutdown-Dashboard/1.0 (Educational Purpose)'
-      },
-      timeout: 10000
+      }
     });
 
-    const $ = cheerio.load(response.data);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
     const shutdowns = [];
 
     // Find the main table containing shutdown data
     // The Wikipedia page has tables with shutdown information
     $('table.wikitable').each((tableIndex, table) => {
+      if (shutdowns.length >= MAX_ROWS) return false; // Stop if we have enough data
+      
       const headers = [];
       
       // Extract headers
       $(table).find('tr').first().find('th').each((i, th) => {
-        headers.push($(th).text().trim());
+        headers.push(sanitizeText($(th).text()));
       });
 
       // Check if this table contains shutdown data
       if (headers.some(h => h.toLowerCase().includes('date') || h.toLowerCase().includes('duration'))) {
         // Extract data rows
         $(table).find('tr').slice(1).each((rowIndex, row) => {
+          if (shutdowns.length >= MAX_ROWS) return false; // Stop if we have enough data
+          
           const cells = $(row).find('td');
           
           if (cells.length >= 3) {
+            const dateText = sanitizeText($(cells[0]).text());
+            const validatedDate = validateDate(dateText);
+            
+            if (!validatedDate) {
+              return; // Skip invalid rows
+            }
+            
             const shutdown = {
               id: shutdowns.length + 1,
-              date: $(cells[0]).text().trim(),
-              duration: $(cells[1]).text().trim(),
-              president: $(cells[2]).text().trim(),
-              congress: cells.length > 3 ? $(cells[3]).text().trim() : '',
-              description: cells.length > 4 ? $(cells[4]).text().trim() : '',
+              date: validatedDate,
+              duration: sanitizeText($(cells[1]).text()),
+              president: sanitizeText($(cells[2]).text()),
+              congress: cells.length > 3 ? sanitizeText($(cells[3]).text()) : '',
+              description: cells.length > 4 ? sanitizeText($(cells[4]).text()) : '',
               affectedAgencies: extractAffectedAgencies($(cells).text()),
               source: 'Wikipedia'
             };
@@ -65,10 +181,28 @@ export async function fetchShutdowns() {
 
     return shutdowns;
   } catch (error) {
-    console.error('Error fetching Wikipedia data:', error.message);
-    // Return sample data as fallback
+    console.error(`Error fetching Wikipedia data (attempt ${retryCount + 1}):`, error.message);
+    
+    // Retry with exponential backoff
+    if (retryCount < MAX_RETRIES) {
+      const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
+      console.log(`Retrying in ${delay}ms...`);
+      await sleep(delay);
+      return fetchShutdownsWithRetry(retryCount + 1);
+    }
+    
+    // Return sample data as fallback after all retries
+    console.log('All retries exhausted, returning sample data');
     return getSampleShutdownData();
   }
+}
+
+/**
+ * Main export function
+ * @returns {Promise<Array>} Array of shutdown events
+ */
+export async function fetchShutdowns() {
+  return fetchShutdownsWithRetry();
 }
 
 /**
@@ -77,6 +211,7 @@ export async function fetchShutdowns() {
  * @returns {Array<string>} List of agencies
  */
 function extractAffectedAgencies(text) {
+  const sanitized = sanitizeText(text);
   const agencies = [];
   const commonAgencies = [
     'Department of Defense',
@@ -91,7 +226,7 @@ function extractAffectedAgencies(text) {
   ];
 
   commonAgencies.forEach(agency => {
-    if (text.includes(agency)) {
+    if (sanitized.includes(agency)) {
       agencies.push(agency);
     }
   });
@@ -197,5 +332,6 @@ function getSampleShutdownData() {
 }
 
 export default {
-  fetchShutdowns
+  fetchShutdowns,
+  fetchWithTimeout
 };

@@ -7,33 +7,37 @@ import Dashboard from './components/Dashboard'
  */
 function App() {
   return (
-    <div className="app" style={{ minHeight: '100vh' }}>
-      <header style={{
-        background: 'var(--color-bg-secondary)',
+    <div className="app fade-in" style={{ minHeight: '100vh' }}>
+      <header className="glass" style={{
+        background: 'rgba(21, 25, 34, 0.9)',
+        backdropFilter: 'blur(20px)',
         borderBottom: '1px solid var(--color-border)',
-        padding: 'var(--spacing-lg)',
-        marginBottom: 'var(--spacing-xl)'
+        padding: 'var(--spacing-xl) var(--spacing-lg)',
+        marginBottom: 'var(--spacing-xl)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)'
       }}>
         <div className="container">
-          <h1 style={{ 
-            marginBottom: 'var(--spacing-xs)',
-            background: 'linear-gradient(135deg, var(--color-accent-blue) 0%, var(--color-accent-purple) 100%)',
+          <h1 className="shine" style={{ 
+            marginBottom: 'var(--spacing-sm)',
+            background: 'linear-gradient(135deg, var(--color-accent-blue) 0%, var(--color-accent-purple) 50%, var(--color-accent-green) 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
+            backgroundClip: 'text',
+            fontSize: '2.75rem',
+            fontWeight: '800',
+            letterSpacing: '-0.5px'
           }}>
             🏛️ US Government Shutdown Dashboard
           </h1>
           <p style={{ 
-            color: 'var(--color-text-muted)', 
+            color: 'var(--color-text-secondary)', 
             marginBottom: 0,
-            fontSize: '0.9rem'
+            fontSize: '1rem',
+            fontWeight: '500'
           }}>
             Interactive visualization of historical shutdowns, economic impacts, and current news
-            <span style={{ 
-              marginLeft: 'var(--spacing-md)', 
-              color: 'var(--color-text-muted)',
-              fontSize: '0.85rem'
+            <span className="badge badge-purple" style={{ 
+              marginLeft: 'var(--spacing-md)'
             }}>
               by Michael Hoch
             </span>
@@ -45,23 +49,28 @@ function App() {
         <Dashboard />
       </main>
 
-      <footer style={{
-        background: 'var(--color-bg-secondary)',
+      <footer className="glass" style={{
+        background: 'rgba(21, 25, 34, 0.9)',
+        backdropFilter: 'blur(20px)',
         borderTop: '1px solid var(--color-border)',
-        padding: 'var(--spacing-lg)',
+        padding: 'var(--spacing-xl)',
         marginTop: 'var(--spacing-2xl)',
         textAlign: 'center'
       }}>
         <div className="container">
           <p style={{ 
-            fontSize: '0.875rem', 
-            color: 'var(--color-text-muted)',
-            marginBottom: 'var(--spacing-sm)'
+            fontSize: '0.9rem', 
+            color: 'var(--color-text-secondary)',
+            marginBottom: 'var(--spacing-sm)',
+            fontWeight: '500'
           }}>
-            Data sources: Wikipedia, NewsAPI, GovInfo.gov
+            📊 Data sources: 
+            <span className="badge badge-blue" style={{ marginLeft: 'var(--spacing-sm)' }}>Wikipedia</span>
+            <span className="badge badge-green" style={{ marginLeft: 'var(--spacing-xs)' }}>NewsAPI</span>
+            <span className="badge badge-yellow" style={{ marginLeft: 'var(--spacing-xs)' }}>GovInfo.gov</span>
           </p>
           <p style={{ 
-            fontSize: '0.8rem', 
+            fontSize: '0.85rem', 
             color: 'var(--color-text-muted)',
             marginBottom: 0
           }}>
@@ -70,9 +79,13 @@ function App() {
               href="https://github.com/hochster71/Government_Shutdown_Interactive_Dashboard" 
               target="_blank" 
               rel="noopener noreferrer"
-              style={{ marginLeft: 'var(--spacing-sm)' }}
+              className="glow-on-hover"
+              style={{ 
+                marginLeft: 'var(--spacing-sm)',
+                fontWeight: '600'
+              }}
             >
-              View on GitHub
+              ⭐ View on GitHub
             </a>
           </p>
         </div>

@@ -1,36 +1,116 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { body, validationResult } from 'express-validator';
 import NodeCache from 'node-cache';
 import dotenv from 'dotenv';
+import pino from 'pino';
+import pinoHttp from 'pino-http';
 import { fetchShutdowns } from './adapters/wiki.js';
 import { fetchNews, fetchTopHeadlines } from './adapters/newsapi.js';
 
 // Load environment variables
 dotenv.config({ path: '../.env' });
 
+// Fail fast if global fetch is not available
+if (typeof fetch === 'undefined') {
+  console.error('❌ FATAL: Global fetch is not available. Please use Node.js 18 or later.');
+  process.exit(1);
+}
+
+// Configure structured logging
+const logLevel = process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug');
+const logger = pino({
+  level: logLevel,
+  transport: process.env.NODE_ENV !== 'production' ? {
+    target: 'pino-pretty',
+    options: { colorize: true }
+  } : undefined
+});
+
 const app = express();
 const PORT = process.env.PORT || 3001;
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const isProduction = NODE_ENV === 'production';
+
+// CORS Configuration
+const ALLOWED_ORIGIN = isProduction 
+  ? process.env.ALLOWED_ORIGIN 
+  : (process.env.ALLOWED_ORIGIN || 'http://localhost:5173');
+
+if (isProduction && !process.env.ALLOWED_ORIGIN) {
+  logger.warn('⚠️  ALLOWED_ORIGIN not set in production. CORS will be restrictive.');
+}
 
 // Initialize cache (TTL: 1 hour = 3600 seconds)
 const cache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
 
-// Middleware
+// Security Headers with Helmet
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline needed for Vite in dev
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Allow embedding for development
+}));
+
+// HTTP Request Logging
+app.use(pinoHttp({ logger }));
+
+// CORS Configuration
 app.use(cors({
-  origin: CORS_ORIGIN,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (isProduction) {
+      // In production, only allow configured origin
+      if (origin === ALLOWED_ORIGIN) {
+        callback(null, true);
+      } else {
+        logger.warn({ origin, allowed: ALLOWED_ORIGIN }, 'CORS origin rejected');
+        callback(new Error('Not allowed by CORS'));
+      }
+    } else {
+      // In development, allow localhost origins
+      if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    }
+  },
   credentials: true
 }));
 
-app.use(express.json());
+// JSON body parser with size limit
+app.use(express.json({ limit: '100kb' }));
 
-// Rate limiting: max 100 requests per 15 minutes
+// Rate limiting: max 100 requests per 15 minutes with informative headers
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  message: 'Too many requests from this IP, please try again later.',
-  standardHeaders: true,
+  message: { error: 'Too many requests from this IP, please try again later.' },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn({ ip: req.ip }, 'Rate limit exceeded');
+    res.status(429).json({
+      error: 'Too many requests',
+      message: 'You have exceeded the rate limit. Please try again later.',
+      retryAfter: res.getHeader('RateLimit-Reset')
+    });
+  }
 });
 
 app.use('/api/', limiter);
@@ -102,10 +182,10 @@ app.get('/api/shutdowns', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error in /api/shutdowns:', error);
+    logger.error({ error: error.message, stack: error.stack }, 'Error in /api/shutdowns');
     res.status(500).json({
       error: 'Failed to fetch shutdown data',
-      message: error.message
+      message: isProduction ? 'An error occurred while fetching data' : error.message
     });
   }
 });
@@ -115,7 +195,21 @@ app.get('/api/shutdowns', async (req, res) => {
  * Proxies requests to NewsAPI for government shutdown news
  * Query params: query, pageSize, sortBy
  */
-app.get('/api/news', async (req, res) => {
+app.get('/api/news', [
+  // Input validation
+  body('query').optional().isString().trim().isLength({ max: 500 }),
+  body('pageSize').optional().isInt({ min: 1, max: 100 }),
+  body('sortBy').optional().isIn(['publishedAt', 'relevancy', 'popularity'])
+], async (req, res) => {
+  // Check validation results
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ 
+      error: 'Validation error', 
+      details: errors.array() 
+    });
+  }
+
   try {
     const apiKey = process.env.NEWSAPI_KEY;
     const cacheKey = `news_${req.query.query || 'default'}`;
@@ -148,10 +242,10 @@ app.get('/api/news', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error in /api/news:', error);
+    logger.error({ error: error.message, stack: error.stack }, 'Error in /api/news');
     res.status(500).json({
       error: 'Failed to fetch news',
-      message: error.message,
+      message: isProduction ? 'An error occurred while fetching news' : error.message,
       articles: []
     });
   }
@@ -194,10 +288,10 @@ app.get('/api/news/headlines', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error in /api/news/headlines:', error);
+    logger.error({ error: error.message, stack: error.stack }, 'Error in /api/news/headlines');
     res.status(500).json({
       error: 'Failed to fetch headlines',
-      message: error.message,
+      message: isProduction ? 'An error occurred while fetching headlines' : error.message,
       articles: []
     });
   }
@@ -225,13 +319,23 @@ app.get('/api/govinfo/:type', (req, res) => {
  * Calculate economic impact of a government shutdown
  * Body: { duration: number (days), affectedWorkers: number, year: number }
  */
-app.post('/api/impact/calc', (req, res) => {
+app.post('/api/impact/calc', [
+  // Input validation
+  body('duration').isInt({ min: 1, max: 365 }).withMessage('Duration must be between 1 and 365 days'),
+  body('affectedWorkers').optional().isInt({ min: 1000, max: 3000000 }).withMessage('Affected workers must be between 1,000 and 3,000,000'),
+  body('year').optional().isInt({ min: 1970, max: 2100 }).withMessage('Year must be between 1970 and 2100')
+], (req, res) => {
+  // Check validation results
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ 
+      error: 'Validation error', 
+      details: errors.array() 
+    });
+  }
+
   try {
     const { duration, affectedWorkers, year } = req.body;
-
-    if (!duration || duration <= 0) {
-      return res.status(400).json({ error: 'Duration must be a positive number' });
-    }
 
     // Base calculations (simplified model)
     const avgDailyCostPerWorker = 400; // Average daily cost per federal worker
@@ -275,13 +379,20 @@ app.post('/api/impact/calc', (req, res) => {
 
     res.json(result);
   } catch (error) {
-    console.error('Error in /api/impact/calc:', error);
+    logger.error({ error: error.message, stack: error.stack }, 'Error in /api/impact/calc');
     res.status(500).json({
       error: 'Failed to calculate impact',
-      message: error.message
+      message: isProduction ? 'An error occurred during calculation' : error.message
     });
   }
 });
+
+// Serve static assets with cache headers
+app.use('/static', express.static('public', {
+  maxAge: '1d',
+  etag: true,
+  lastModified: true
+}));
 
 // 404 handler
 app.use((req, res) => {
@@ -300,21 +411,47 @@ app.use((req, res) => {
   });
 });
 
-// Error handler
+// Error handler - don't leak stack traces in production
 app.use((err, req, res, next) => {
-  console.error('Server error:', err);
-  res.status(500).json({
+  logger.error({ error: err.message, stack: err.stack }, 'Server error');
+  res.status(err.status || 500).json({
     error: 'Internal Server Error',
-    message: err.message
+    message: isProduction ? 'An unexpected error occurred' : err.message
+  });
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM signal received: closing HTTP server');
+  server.close(() => {
+    logger.info('HTTP server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  logger.info('SIGINT signal received: closing HTTP server');
+  server.close(() => {
+    logger.info('HTTP server closed');
+    process.exit(0);
   });
 });
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
+  logger.info({
+    port: PORT,
+    env: NODE_ENV,
+    corsOrigin: ALLOWED_ORIGIN,
+    newsApiConfigured: !!process.env.NEWSAPI_KEY
+  }, 'Government Shutdown Dashboard API Server started');
+  
   console.log(`✅ Government Shutdown Dashboard API Server`);
   console.log(`🚀 Running on http://localhost:${PORT}`);
-  console.log(`📊 CORS enabled for: ${CORS_ORIGIN}`);
+  console.log(`📊 CORS enabled for: ${ALLOWED_ORIGIN}`);
   console.log(`🔑 NewsAPI: ${process.env.NEWSAPI_KEY ? 'Configured ✓' : 'Not configured (optional)'}`);
+  console.log(`🔒 Security: Helmet enabled with CSP`);
+  console.log(`📝 Logging: ${logLevel} level`);
   console.log(`\n📚 Available endpoints:`);
   console.log(`   GET  /health`);
   console.log(`   GET  /api/sources`);
@@ -324,3 +461,5 @@ app.listen(PORT, () => {
   console.log(`   GET  /api/govinfo/:type`);
   console.log(`   POST /api/impact/calc`);
 });
+
+export default app;
