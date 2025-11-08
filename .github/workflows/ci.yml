@@ -6,10 +6,15 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+
 jobs:
   backend-test:
     name: Backend Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +38,8 @@ jobs:
   frontend-build:
     name: Frontend Build and Lint
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     steps:
       - uses: actions/checkout@v4
@@ -57,6 +64,8 @@ jobs:
   security-check:
     name: Security Audit
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     steps:
       - uses: actions/checkout@v4

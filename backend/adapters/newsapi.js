@@ -33,19 +33,47 @@ async function fetchWithTimeout(url, timeout = 10000, options = {}) {
 
 /**
  * Sanitize text to prevent script injection
+ * Uses a more robust approach than regex to avoid incomplete sanitization
  * @param {string} text - Text to sanitize
  * @returns {string} Sanitized text
  */
 function sanitizeText(text) {
   if (!text || typeof text !== 'string') return '';
   
-  return text
-    .trim()
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-    .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
-    .replace(/on\w+\s*=\s*'[^']*'/gi, '')
-    .substring(0, 5000);
+  // Trim and limit length first
+  let sanitized = text.trim().substring(0, 5000);
+  
+  // Remove all script and iframe tags with a comprehensive approach
+  // Keep removing until none are left (handles nested tags)
+  let prevLength = 0;
+  while (sanitized.length !== prevLength) {
+    prevLength = sanitized.length;
+    sanitized = sanitized
+      .replace(/<script[^>]*>.*?<\/script>/gis, '')
+      .replace(/<iframe[^>]*>.*?<\/iframe>/gis, '')
+      .replace(/<script[^>]*>/gi, '')
+      .replace(/<\/script>/gi, '')
+      .replace(/<iframe[^>]*>/gi, '')
+      .replace(/<\/iframe>/gi, '');
+  }
+  
+  // Remove all event handlers (comprehensive list)
+  const eventHandlers = [
+    'onclick', 'onload', 'onerror', 'onmouseover', 'onmouseout',
+    'onmousedown', 'onmouseup', 'onmousemove', 'onfocus', 'onblur',
+    'onchange', 'onsubmit', 'onkeydown', 'onkeyup', 'onkeypress',
+    'ondblclick', 'oncontextmenu', 'oninput', 'oninvalid', 'onreset',
+    'onsearch', 'onselect', 'ondrag', 'ondrop', 'oncopy', 'oncut', 'onpaste'
+  ];
+  
+  eventHandlers.forEach(handler => {
+    const pattern = new RegExp(`\\s*${handler}\\s*=\\s*["'][^"']*["']`, 'gi');
+    sanitized = sanitized.replace(pattern, '');
+    const pattern2 = new RegExp(`\\s*${handler}\\s*=\\s*[^\\s>]*`, 'gi');
+    sanitized = sanitized.replace(pattern2, '');
+  });
+  
+  return sanitized;
 }
 
 /**
