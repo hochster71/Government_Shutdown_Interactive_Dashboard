@@ -10,6 +10,7 @@ An interactive, dark-themed dashboard for visualizing and analyzing US Governmen
 - 🔄 **Sankey Diagram**: Explore relationships between causes, affected agencies, and resolutions
 - 💰 **Impact Calculator**: Calculate and visualize economic impacts of shutdowns
 - 📰 **Live News Feed**: Real-time news articles related to government shutdowns
+- ⏰ **Automated Updates**: Data refreshes every 6 hours to ensure latest information
 - 🎨 **Dark Theme**: Professional dark theme optimized for data visualization
 - 📱 **Responsive Design**: Works seamlessly on desktop and mobile devices
 
@@ -32,6 +33,7 @@ An interactive, dark-themed dashboard for visualizing and analyzing US Governmen
 - **Cheerio** for web scraping Wikipedia data
 - **Node-cache** for efficient data caching
 - **Express-rate-limit** for API protection
+- **Node-cron** for automated data updates every 6 hours
 - Native fetch API with AbortController for timeouts
 - NewsAPI integration for real-time news
 
@@ -43,6 +45,8 @@ An interactive, dark-themed dashboard for visualizing and analyzing US Governmen
 - 📝 Structured logging with sensitive data filtering
 - 🔐 CORS hardening for production
 - 🚦 Graceful error handling (no stack traces in production)
+- ⏰ Automated data updates with secure scheduling
+- 🔍 Dependency vulnerability monitoring
 
 ## Quick Start
 
@@ -107,9 +111,12 @@ The application will be available at http://localhost:3001
 ```
 ├── backend/                # Backend API server
 │   ├── server.js          # Express server with API endpoints
+│   ├── services/          # Background services
+│   │   └── updateScheduler.js # Automated data update scheduler
 │   ├── adapters/          # Data source adapters
 │   │   ├── wiki.js        # Wikipedia scraper
 │   │   └── newsapi.js     # NewsAPI client
+│   ├── tests/             # Backend unit tests
 │   └── package.json
 ├── frontend/              # React frontend application
 │   ├── src/
@@ -143,6 +150,21 @@ The backend provides the following REST API endpoints:
 - `POST /api/impact/calc` - Calculate economic impact based on parameters
 
 All endpoints implement caching and rate limiting for optimal performance.
+
+## Automated Data Updates
+
+The backend automatically refreshes government shutdown data every 6 hours to ensure the dashboard displays the most current information:
+
+- **Schedule**: Updates run at 0:00, 6:00, 12:00, and 18:00 Eastern Time
+- **Data Sources Updated**:
+  - Wikipedia shutdown data (historical and current)
+  - NewsAPI articles (if API key is configured)
+  - Top political headlines
+- **Startup Behavior**: Initial data fetch occurs 5 seconds after server starts
+- **Error Handling**: Failed updates are logged but don't affect server operation
+- **Security**: Uses secure cron scheduling with proper timezone handling
+
+The scheduler runs in the background and logs all update activity for monitoring and debugging.
 
 ## Configuration
 
