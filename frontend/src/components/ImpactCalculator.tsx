@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import API_ENDPOINTS from '../config/api'
 
 /**
  * Impact Calculator Component
@@ -35,11 +36,25 @@ function ImpactCalculator() {
   const [error, setError] = useState<string | null>(null)
 
   const calculateImpact = async () => {
+    // Validate inputs
+    if (duration < 1 || duration > 365) {
+      setError('Duration must be between 1 and 365 days');
+      return;
+    }
+
+    if (affectedWorkers < 1000 || affectedWorkers > 5000000) {
+      setError('Affected workers must be between 1,000 and 5,000,000');
+      return;
+    }
+
     try {
       setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/impact/calc', {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const response = await fetch(API_ENDPOINTS.IMPACT_CALC, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -49,10 +64,14 @@ function ImpactCalculator() {
           affectedWorkers,
           year,
         }),
+        signal: controller.signal,
       })
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        throw new Error('Failed to calculate impact')
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to calculate impact')
       }
 
       const data = await response.json()
@@ -60,7 +79,8 @@ function ImpactCalculator() {
       setLoading(false)
     } catch (err) {
       console.error('Error calculating impact:', err)
-      setError('Failed to calculate economic impact. Please try again.')
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Failed to calculate economic impact: ${errorMessage}`)
       setLoading(false)
     }
   }

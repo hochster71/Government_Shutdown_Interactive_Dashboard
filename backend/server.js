@@ -1,8 +1,10 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import NodeCache from 'node-cache';
 import dotenv from 'dotenv';
+import { body, query, validationResult } from 'express-validator';
 import { fetchShutdowns } from './adapters/wiki.js';
 import { fetchNews, fetchTopHeadlines } from './adapters/newsapi.js';
 
@@ -16,13 +18,48 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
 // Initialize cache (TTL: 1 hour = 3600 seconds)
 const cache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
 
+// Security Middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+}));
+
 // Middleware
 app.use(cors({
   origin: CORS_ORIGIN,
   credentials: true
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '10kb' })); // Limit payload size to prevent DOS
+
+// Validation error handler middleware
+const handleValidationErrors = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ 
+      error: 'Validation failed',
+      details: errors.array() 
+    });
+  }
+  next();
+};
 
 // Rate limiting: max 100 requests per 15 minutes
 const limiter = rateLimit({
@@ -115,7 +152,12 @@ app.get('/api/shutdowns', async (req, res) => {
  * Proxies requests to NewsAPI for government shutdown news
  * Query params: query, pageSize, sortBy
  */
-app.get('/api/news', async (req, res) => {
+app.get('/api/news', [
+  query('query').optional().isString().trim().isLength({ max: 500 }),
+  query('pageSize').optional().isInt({ min: 1, max: 100 }).toInt(),
+  query('sortBy').optional().isIn(['publishedAt', 'relevancy', 'popularity']),
+  handleValidationErrors
+], async (req, res) => {
   try {
     const apiKey = process.env.NEWSAPI_KEY;
     const cacheKey = `news_${req.query.query || 'default'}`;
@@ -161,7 +203,12 @@ app.get('/api/news', async (req, res) => {
  * GET /api/news/headlines
  * Fetches top political headlines
  */
-app.get('/api/news/headlines', async (req, res) => {
+app.get('/api/news/headlines', [
+  query('category').optional().isIn(['politics', 'business', 'general']),
+  query('country').optional().isLength({ min: 2, max: 2 }),
+  query('pageSize').optional().isInt({ min: 1, max: 100 }).toInt(),
+  handleValidationErrors
+], async (req, res) => {
   try {
     const apiKey = process.env.NEWSAPI_KEY;
     const cacheKey = 'headlines';
@@ -225,13 +272,14 @@ app.get('/api/govinfo/:type', (req, res) => {
  * Calculate economic impact of a government shutdown
  * Body: { duration: number (days), affectedWorkers: number, year: number }
  */
-app.post('/api/impact/calc', (req, res) => {
+app.post('/api/impact/calc', [
+  body('duration').isInt({ min: 1, max: 365 }).toInt(),
+  body('affectedWorkers').optional().isInt({ min: 1, max: 5000000 }).toInt(),
+  body('year').optional().isInt({ min: 1900, max: 2100 }).toInt(),
+  handleValidationErrors
+], (req, res) => {
   try {
     const { duration, affectedWorkers, year } = req.body;
-
-    if (!duration || duration <= 0) {
-      return res.status(400).json({ error: 'Duration must be a positive number' });
-    }
 
     // Base calculations (simplified model)
     const avgDailyCostPerWorker = 400; // Average daily cost per federal worker

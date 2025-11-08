@@ -3,6 +3,8 @@ import Timeline from './Timeline'
 import SankeyDiagram from './SankeyDiagram'
 import ImpactCalculator from './ImpactCalculator'
 import SourceCitations from './SourceCitations'
+import API_ENDPOINTS from '../config/api'
+import { sanitizeUrl, escapeHtml } from '../utils/security'
 
 /**
  * Dashboard Component
@@ -44,16 +46,36 @@ function Dashboard() {
       setLoading(true)
       setError(null)
 
-      // Fetch shutdown data
-      const shutdownResponse = await fetch('/api/shutdowns')
+      // Fetch shutdown data with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+      const shutdownResponse = await fetch(API_ENDPOINTS.SHUTDOWNS, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!shutdownResponse.ok) {
+        throw new Error(`HTTP error! status: ${shutdownResponse.status}`);
+      }
+
       const shutdownData = await shutdownResponse.json()
       setShutdowns(shutdownData.data || [])
 
       // Fetch news (optional)
       try {
-        const newsResponse = await fetch('/api/news?pageSize=10')
-        const newsData = await newsResponse.json()
-        setNews(newsData.articles || [])
+        const newsController = new AbortController();
+        const newsTimeoutId = setTimeout(() => newsController.abort(), 10000);
+        
+        const newsResponse = await fetch(`${API_ENDPOINTS.NEWS}?pageSize=10`, {
+          signal: newsController.signal,
+        });
+        clearTimeout(newsTimeoutId);
+
+        if (newsResponse.ok) {
+          const newsData = await newsResponse.json()
+          setNews(newsData.articles || [])
+        }
       } catch (newsError) {
         console.warn('News fetch failed (optional):', newsError)
       }
@@ -61,7 +83,8 @@ function Dashboard() {
       setLoading(false)
     } catch (err) {
       console.error('Error fetching data:', err)
-      setError('Failed to load dashboard data. Please try again.')
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Failed to load dashboard data: ${errorMessage}. Please try again.`)
       setLoading(false)
     }
   }
@@ -199,39 +222,42 @@ function Dashboard() {
           </div>
           <div className="card-body">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-              {news.slice(0, 5).map((article) => (
-                <div 
-                  key={article.id} 
-                  style={{ 
-                    padding: 'var(--spacing-md)',
-                    background: 'var(--color-bg-tertiary)',
-                    borderRadius: 'var(--radius-md)',
-                    borderLeft: '3px solid var(--color-accent-blue)'
-                  }}
-                >
-                  <h4 style={{ marginBottom: 'var(--spacing-xs)' }}>
-                    <a href={article.url} target="_blank" rel="noopener noreferrer">
-                      {article.title}
-                    </a>
-                  </h4>
-                  <p style={{ 
-                    fontSize: '0.875rem', 
-                    marginBottom: 'var(--spacing-xs)',
-                    color: 'var(--color-text-secondary)'
-                  }}>
-                    {article.description}
-                  </p>
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between',
-                    fontSize: '0.75rem',
-                    color: 'var(--color-text-muted)'
-                  }}>
-                    <span>{article.source}</span>
-                    <span>{new Date(article.publishedAt).toLocaleDateString()}</span>
+              {news.slice(0, 5).map((article) => {
+                const sanitizedUrl = sanitizeUrl(article.url);
+                return sanitizedUrl ? (
+                  <div 
+                    key={article.id} 
+                    style={{ 
+                      padding: 'var(--spacing-md)',
+                      background: 'var(--color-bg-tertiary)',
+                      borderRadius: 'var(--radius-md)',
+                      borderLeft: '3px solid var(--color-accent-blue)'
+                    }}
+                  >
+                    <h4 style={{ marginBottom: 'var(--spacing-xs)' }}>
+                      <a href={sanitizedUrl} target="_blank" rel="noopener noreferrer">
+                        {escapeHtml(article.title)}
+                      </a>
+                    </h4>
+                    <p style={{ 
+                      fontSize: '0.875rem', 
+                      marginBottom: 'var(--spacing-xs)',
+                      color: 'var(--color-text-secondary)'
+                    }}>
+                      {escapeHtml(article.description || '')}
+                    </p>
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between',
+                      fontSize: '0.75rem',
+                      color: 'var(--color-text-muted)'
+                    }}>
+                      <span>{escapeHtml(article.source)}</span>
+                      <span>{new Date(article.publishedAt).toLocaleDateString()}</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ) : null;
+              })}
             </div>
           </div>
         </div>
