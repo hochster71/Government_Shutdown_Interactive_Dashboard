@@ -3,6 +3,8 @@ import Timeline from './Timeline'
 import SankeyDiagram from './SankeyDiagram'
 import ImpactCalculator from './ImpactCalculator'
 import SourceCitations from './SourceCitations'
+import { fetchShutdowns, fetchNews, sanitizeString } from '../utils/api'
+import { logger } from '../utils/logger'
 
 /**
  * Dashboard Component
@@ -44,24 +46,25 @@ function Dashboard() {
       setLoading(true)
       setError(null)
 
-      // Fetch shutdown data
-      const shutdownResponse = await fetch('/api/shutdowns')
-      const shutdownData = await shutdownResponse.json()
+      logger.info('Fetching dashboard data')
+
+      // Fetch shutdown data using centralized API
+      const shutdownData = await fetchShutdowns()
       setShutdowns(shutdownData.data || [])
 
       // Fetch news (optional)
       try {
-        const newsResponse = await fetch('/api/news?pageSize=10')
-        const newsData = await newsResponse.json()
+        const newsData = await fetchNews(undefined, 10)
         setNews(newsData.articles || [])
-      } catch (newsError) {
-        console.warn('News fetch failed (optional):', newsError)
+      } catch (newsError: any) {
+        logger.warn('News fetch failed (optional):', newsError)
       }
 
+      logger.info('Dashboard data loaded successfully')
       setLoading(false)
-    } catch (err) {
-      console.error('Error fetching data:', err)
-      setError('Failed to load dashboard data. Please try again.')
+    } catch (err: any) {
+      logger.error('Error fetching data:', err)
+      setError(sanitizeString(err.message || 'Failed to load dashboard data. Please try again.'))
       setLoading(false)
     }
   }

@@ -29,3 +29,4 @@ Thumbs.db
 # Cache
 .cache/
 *.log
+backend/server.js.backup
