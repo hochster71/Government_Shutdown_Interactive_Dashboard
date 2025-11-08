@@ -61,8 +61,8 @@ const handleValidationErrors = (req, res, next) => {
   next();
 };
 
-// Rate limiting: max 100 requests per 15 minutes
-const limiter = rateLimit({
+// General API rate limiting: max 100 requests per 15 minutes
+const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   message: 'Too many requests from this IP, please try again later.',
@@ -70,7 +70,16 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 
-app.use('/api/', limiter);
+// Stricter rate limiting for POST endpoints: max 20 requests per 15 minutes
+const postLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: 'Too many calculation requests. Please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/', generalLimiter);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -272,7 +281,7 @@ app.get('/api/govinfo/:type', (req, res) => {
  * Calculate economic impact of a government shutdown
  * Body: { duration: number (days), affectedWorkers: number, year: number }
  */
-app.post('/api/impact/calc', [
+app.post('/api/impact/calc', postLimiter, [
   body('duration').isInt({ min: 1, max: 365 }).toInt(),
   body('affectedWorkers').optional().isInt({ min: 1, max: 5000000 }).toInt(),
   body('year').optional().isInt({ min: 1900, max: 2100 }).toInt(),

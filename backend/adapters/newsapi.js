@@ -24,10 +24,13 @@ export async function fetchNews(apiKey, options = {}) {
   }
 
   try {
-    const query = options.query || DEFAULT_QUERY;
-    const pageSize = options.pageSize || 20;
-    const language = options.language || 'en';
-    const sortBy = options.sortBy || 'publishedAt';
+    // Sanitize and validate options
+    const query = (options.query || DEFAULT_QUERY).substring(0, 500); // Limit query length
+    const pageSize = Math.min(Math.max(parseInt(options.pageSize) || 20, 1), 100); // Clamp between 1-100
+    const language = (options.language || 'en').substring(0, 2); // Limit to 2 chars
+    const sortBy = ['publishedAt', 'relevancy', 'popularity'].includes(options.sortBy) 
+      ? options.sortBy 
+      : 'publishedAt';
 
     const response = await axios.get(`${NEWS_API_BASE_URL}/everything`, {
       params: {
@@ -90,9 +93,11 @@ export async function fetchTopHeadlines(apiKey, options = {}) {
   }
 
   try {
-    const category = options.category || 'politics';
-    const country = options.country || 'us';
-    const pageSize = options.pageSize || 10;
+    // Sanitize and validate options
+    const validCategories = ['politics', 'business', 'general'];
+    const category = validCategories.includes(options.category) ? options.category : 'politics';
+    const country = (options.country || 'us').substring(0, 2).toLowerCase();
+    const pageSize = Math.min(Math.max(parseInt(options.pageSize) || 10, 1), 100);
 
     const response = await axios.get(`${NEWS_API_BASE_URL}/top-headlines`, {
       params: {
