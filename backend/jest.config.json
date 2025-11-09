@@ -8,5 +8,6 @@
     "!**/node_modules/**",
     "!**/tests/**",
     "!**/coverage/**"
-  ]
+  ],
+  "forceExit": true
 }

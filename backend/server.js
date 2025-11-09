@@ -451,38 +451,42 @@ process.on('SIGINT', () => {
   });
 });
 
-// Start server
-const server = app.listen(PORT, () => {
-  logger.info({
-    port: PORT,
-    env: NODE_ENV,
-    corsOrigin: ALLOWED_ORIGIN,
-    newsApiConfigured: !!process.env.NEWSAPI_KEY
-  }, 'Government Shutdown Dashboard API Server started');
-  
-  console.log(`✅ Government Shutdown Dashboard API Server`);
-  console.log(`🚀 Running on http://localhost:${PORT}`);
-  console.log(`📊 CORS enabled for: ${ALLOWED_ORIGIN}`);
-  console.log(`🔑 NewsAPI: ${process.env.NEWSAPI_KEY ? 'Configured ✓' : 'Not configured (optional)'}`);
-  console.log(`🔒 Security: Helmet enabled with CSP`);
-  console.log(`📝 Logging: ${logLevel} level`);
-  console.log(`\n📚 Available endpoints:`);
-  console.log(`   GET  /health`);
-  console.log(`   GET  /api/sources`);
-  console.log(`   GET  /api/shutdowns`);
-  console.log(`   GET  /api/news`);
-  console.log(`   GET  /api/news/headlines`);
-  console.log(`   GET  /api/govinfo/:type`);
-  console.log(`   POST /api/impact/calc`);
-  
-  // Initialize automated update scheduler after server starts
-  try {
-    updateScheduler = initUpdateScheduler(cache, logger, process.env.NEWSAPI_KEY);
-    console.log(`\n⏰ Automated updates: Every 6 hours (ET)`);
-  } catch (error) {
-    logger.error({ error: error.message }, 'Failed to initialize update scheduler');
-    console.error(`⚠️  Warning: Update scheduler failed to initialize`);
-  }
-});
+// Only start the server if this file is run directly (not imported for testing)
+let server;
+if (process.env.NODE_ENV !== 'test') {
+  server = app.listen(PORT, () => {
+    logger.info({
+      port: PORT,
+      env: NODE_ENV,
+      corsOrigin: ALLOWED_ORIGIN,
+      newsApiConfigured: !!process.env.NEWSAPI_KEY
+    }, 'Government Shutdown Dashboard API Server started');
+    
+    console.log(`✅ Government Shutdown Dashboard API Server`);
+    console.log(`🚀 Running on http://localhost:${PORT}`);
+    console.log(`📊 CORS enabled for: ${ALLOWED_ORIGIN}`);
+    console.log(`🔑 NewsAPI: ${process.env.NEWSAPI_KEY ? 'Configured ✓' : 'Not configured (optional)'}`);
+    console.log(`🔒 Security: Helmet enabled with CSP`);
+    console.log(`📝 Logging: ${logLevel} level`);
+    console.log(`\n📚 Available endpoints:`);
+    console.log(`   GET  /health`);
+    console.log(`   GET  /api/sources`);
+    console.log(`   GET  /api/shutdowns`);
+    console.log(`   GET  /api/news`);
+    console.log(`   GET  /api/news/headlines`);
+    console.log(`   GET  /api/govinfo/:type`);
+    console.log(`   POST /api/impact/calc`);
+    
+    // Initialize automated update scheduler after server starts
+    try {
+      updateScheduler = initUpdateScheduler(cache, logger, process.env.NEWSAPI_KEY);
+      console.log(`\n⏰ Automated updates: Every 6 hours (ET)`);
+    } catch (error) {
+      logger.error({ error: error.message }, 'Failed to initialize update scheduler');
+      console.error(`⚠️  Warning: Update scheduler failed to initialize`);
+    }
+  });
+}
 
 export default app;
+export { server, updateScheduler };
