@@ -9,6 +9,7 @@ import pino from 'pino';
 import pinoHttp from 'pino-http';
 import { fetchShutdowns } from './adapters/wiki.js';
 import { fetchNews, fetchTopHeadlines } from './adapters/newsapi.js';
+import { initUpdateScheduler } from './services/updateScheduler.js';
 
 // Load environment variables
 dotenv.config({ path: '../.env' });
@@ -115,9 +116,16 @@ const limiter = rateLimit({
 
 app.use('/api/', limiter);
 
+// Store scheduler instance for management
+let updateScheduler = null;
+
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    scheduler: updateScheduler ? 'active' : 'inactive'
+  });
 });
 
 /**
@@ -423,6 +431,9 @@ app.use((err, req, res, next) => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM signal received: closing HTTP server');
+  if (updateScheduler) {
+    updateScheduler.stop();
+  }
   server.close(() => {
     logger.info('HTTP server closed');
     process.exit(0);
@@ -431,6 +442,9 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   logger.info('SIGINT signal received: closing HTTP server');
+  if (updateScheduler) {
+    updateScheduler.stop();
+  }
   server.close(() => {
     logger.info('HTTP server closed');
     process.exit(0);
@@ -460,6 +474,15 @@ const server = app.listen(PORT, () => {
   console.log(`   GET  /api/news/headlines`);
   console.log(`   GET  /api/govinfo/:type`);
   console.log(`   POST /api/impact/calc`);
+  
+  // Initialize automated update scheduler after server starts
+  try {
+    updateScheduler = initUpdateScheduler(cache, logger, process.env.NEWSAPI_KEY);
+    console.log(`\n⏰ Automated updates: Every 6 hours (ET)`);
+  } catch (error) {
+    logger.error({ error: error.message }, 'Failed to initialize update scheduler');
+    console.error(`⚠️  Warning: Update scheduler failed to initialize`);
+  }
 });
 
 export default app;
