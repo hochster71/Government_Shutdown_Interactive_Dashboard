@@ -165,7 +165,7 @@ app.get('/api/shutdowns', async (req, res) => {
  * Query params: query, pageSize, sortBy
  */
 app.get('/api/news', [
-  query('query').optional().isString().trim().isLength({ max: 500 }),
+  query('query').optional().isString().trim().notEmpty().isLength({ max: 500 }),
   query('pageSize').optional().isInt({ min: 1, max: 100 }).toInt(),
   query('sortBy').optional().isIn(['publishedAt', 'relevancy', 'popularity']),
   handleValidationErrors
