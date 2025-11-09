@@ -83,7 +83,12 @@ function Dashboard() {
       setLoading(false)
     } catch (err) {
       console.error('Error fetching data:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      let errorMessage = 'Unknown error';
+      if (err instanceof Error) {
+        errorMessage = err.name === 'AbortError'
+          ? 'Request timed out'
+          : err.message;
+      }
       setError(`Failed to load dashboard data: ${errorMessage}. Please try again.`)
       setLoading(false)
     }
