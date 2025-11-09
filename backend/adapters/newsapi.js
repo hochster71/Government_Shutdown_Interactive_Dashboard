@@ -98,7 +98,8 @@ export async function fetchTopHeadlines(apiKey, options = {}) {
     const validCategories = ['politics', 'business', 'general'];
     const category = validCategories.includes(options.category) ? options.category : 'politics';
     const country = (options.country || 'us').substring(0, 2).toLowerCase();
-    const pageSize = Math.min(Math.max(parseInt(options.pageSize) || 10, 1), 100);
+    const pageSizeInt = Number.parseInt(options.pageSize, 10);
+    const pageSize = Number.isNaN(pageSizeInt) ? 10 : Math.min(Math.max(pageSizeInt, 1), 100);
 
     const response = await axios.get(`${NEWS_API_BASE_URL}/top-headlines`, {
       params: {
