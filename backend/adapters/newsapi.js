@@ -26,7 +26,8 @@ export async function fetchNews(apiKey, options = {}) {
   try {
     // Sanitize and validate options
     const query = (options.query || DEFAULT_QUERY).substring(0, 500); // Limit query length
-    const pageSize = Math.min(Math.max(parseInt(options.pageSize) || 20, 1), 100); // Clamp between 1-100
+    const pageSizeInt = Number.parseInt(options.pageSize, 10);
+    const pageSize = Number.isNaN(pageSizeInt) ? 20 : Math.min(Math.max(pageSizeInt, 1), 100); // Clamp between 1-100
     const language = (options.language || 'en').substring(0, 2); // Limit to 2 chars
     const sortBy = ['publishedAt', 'relevancy', 'popularity'].includes(options.sortBy) 
       ? options.sortBy 
