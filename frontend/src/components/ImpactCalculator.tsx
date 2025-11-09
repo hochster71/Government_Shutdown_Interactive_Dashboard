@@ -79,7 +79,12 @@ function ImpactCalculator() {
       setLoading(false)
     } catch (err) {
       console.error('Error calculating impact:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      let errorMessage = 'Unknown error';
+      if (err instanceof Error) {
+        errorMessage = err.name === 'AbortError'
+          ? 'Request timed out. Please try again.'
+          : err.message;
+      }
       setError(`Failed to calculate economic impact: ${errorMessage}`)
       setLoading(false)
     }
