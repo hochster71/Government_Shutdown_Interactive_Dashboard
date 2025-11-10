@@ -19,6 +19,7 @@ describe('Update Scheduler', () => {
   let mockCache;
   let mockLogger;
   let scheduler;
+  let schedulers = []; // Track all schedulers for cleanup
 
   beforeEach(() => {
     // Create mock cache
@@ -27,7 +28,7 @@ describe('Update Scheduler', () => {
       get: jest.fn()
     };
 
-    // Create mock logger
+    // Create mock logger with silent output during tests
     mockLogger = {
       info: jest.fn(),
       warn: jest.fn(),
@@ -39,16 +40,25 @@ describe('Update Scheduler', () => {
   });
 
   afterEach(() => {
-    // Clean up scheduler if it exists
-    if (scheduler && scheduler.stop) {
-      scheduler.stop();
-    }
+    // Clean up all schedulers created during tests
+    schedulers.forEach(s => {
+      if (s && s.stop) {
+        try {
+          s.stop();
+        } catch (err) {
+          // Ignore cleanup errors
+        }
+      }
+    });
+    schedulers = [];
+    scheduler = null;
   });
 
   describe('Initialization', () => {
     test('should initialize scheduler with valid inputs', () => {
       expect(() => {
         scheduler = initUpdateScheduler(mockCache, mockLogger, 'test-api-key');
+        schedulers.push(scheduler); // Track for cleanup
       }).not.toThrow();
 
       expect(mockLogger.info).toHaveBeenCalledWith(
@@ -58,18 +68,19 @@ describe('Update Scheduler', () => {
 
     test('should throw error if cache is missing', () => {
       expect(() => {
-        initUpdateScheduler(null, mockLogger, 'test-api-key');
+        scheduler = initUpdateScheduler(null, mockLogger, 'test-api-key');
       }).toThrow('Cache object is required');
     });
 
     test('should throw error if logger is missing', () => {
       expect(() => {
-        initUpdateScheduler(mockCache, null, 'test-api-key');
+        scheduler = initUpdateScheduler(mockCache, null, 'test-api-key');
       }).toThrow('Logger object is required');
     });
 
     test('should log initialization with correct schedule info', () => {
       scheduler = initUpdateScheduler(mockCache, mockLogger, 'test-api-key');
+      schedulers.push(scheduler); // Track for cleanup
 
       expect(mockLogger.info).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -84,6 +95,7 @@ describe('Update Scheduler', () => {
   describe('Scheduler Management', () => {
     test('should return scheduler object with stop method', () => {
       scheduler = initUpdateScheduler(mockCache, mockLogger, 'test-api-key');
+      schedulers.push(scheduler); // Track for cleanup
 
       expect(scheduler).toHaveProperty('task');
       expect(scheduler).toHaveProperty('stop');
@@ -93,6 +105,7 @@ describe('Update Scheduler', () => {
 
     test('should stop scheduler when stop is called', () => {
       scheduler = initUpdateScheduler(mockCache, mockLogger, 'test-api-key');
+      schedulers.push(scheduler); // Track for cleanup
       
       scheduler.stop();
 
@@ -108,12 +121,10 @@ describe('Update Scheduler', () => {
       ]);
 
       scheduler = initUpdateScheduler(mockCache, mockLogger, 'test-api-key');
+      schedulers.push(scheduler); // Track for cleanup
 
       // Manually trigger update
       await scheduler.performScheduledUpdate();
-
-      // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(mockLogger.info).toHaveBeenCalledWith(
         expect.stringContaining('Starting scheduled data update cycle')
@@ -126,11 +137,9 @@ describe('Update Scheduler', () => {
       fetchShutdowns.mockRejectedValue(new Error('Network error'));
 
       scheduler = initUpdateScheduler(mockCache, mockLogger, 'test-api-key');
+      schedulers.push(scheduler); // Track for cleanup
 
       await scheduler.performScheduledUpdate();
-
-      // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -142,11 +151,9 @@ describe('Update Scheduler', () => {
 
     test('should skip news update if API key is not configured', async () => {
       scheduler = initUpdateScheduler(mockCache, mockLogger, null);
+      schedulers.push(scheduler); // Track for cleanup
 
       await scheduler.performScheduledUpdate();
-
-      // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
         expect.stringContaining('NewsAPI key not configured')

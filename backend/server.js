@@ -23,8 +23,8 @@ if (typeof fetch === 'undefined') {
 // Configure structured logging
 const logLevel = process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug');
 const logger = pino({
-  level: logLevel,
-  transport: process.env.NODE_ENV !== 'production' ? {
+  level: process.env.NODE_ENV === 'test' ? 'silent' : logLevel,
+  transport: (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') ? {
     target: 'pino-pretty',
     options: { colorize: true }
   } : undefined
