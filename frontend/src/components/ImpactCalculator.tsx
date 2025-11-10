@@ -81,9 +81,10 @@ function ImpactCalculator() {
       const data = await calculateImpact(duration, affectedWorkers, year)
       setResult(data)
       logger.info('Impact calculated successfully')
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Error calculating impact:', err)
-      setError(sanitizeString(err.message || 'Failed to calculate economic impact. Please try again.'))
+      const message = (err instanceof Error && err.message) ? err.message : String(err)
+      setError(sanitizeString(message || 'Failed to calculate economic impact. Please try again.'))
     } finally {
       setLoading(false)
     }
@@ -290,7 +291,7 @@ function ImpactCalculator() {
               <strong>Lost Productivity:</strong> Permanent economic losses that cannot be recovered even after the shutdown ends.
             </p>
             <p style={{ fontSize: '0.875rem', marginBottom: 0 }}>
-              <strong>GDP Impact:</strong> The shutdown's effect on the nation's Gross Domestic Product as a percentage.
+              <strong>GDP Impact:</strong> The shutdown&apos;s effect on the nation&apos;s Gross Domestic Product as a percentage.
             </p>
           </div>
         </div>

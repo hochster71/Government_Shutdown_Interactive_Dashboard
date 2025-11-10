@@ -42,7 +42,7 @@ function Dashboard() {
   }, [])
 
   const fetchData = async () => {
-    try {
+      try {
       setLoading(true)
       setError(null)
 
@@ -56,15 +56,17 @@ function Dashboard() {
       try {
         const newsData = await fetchNews(undefined, 10)
         setNews(newsData.articles || [])
-      } catch (newsError: any) {
+      } catch (newsError: unknown) {
+        // preserve the original value in logs; cast only when reading properties
         logger.warn('News fetch failed (optional):', newsError)
       }
 
       logger.info('Dashboard data loaded successfully')
       setLoading(false)
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Error fetching data:', err)
-      setError(sanitizeString(err.message || 'Failed to load dashboard data. Please try again.'))
+      const message = (err instanceof Error && err.message) ? err.message : String(err)
+      setError(sanitizeString(message || 'Failed to load dashboard data. Please try again.'))
       setLoading(false)
     }
   }
