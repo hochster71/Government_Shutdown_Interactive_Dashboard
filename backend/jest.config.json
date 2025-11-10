@@ -1,12 +1,13 @@
 {
   "testEnvironment": "node",
   "transform": {},
-  "testMatch": ["**/tests/**/*.test.js"],
+  "testMatch": ["**/tests/**/*.test.js", "**/__tests__/**/*.test.js"],
   "testTimeout": 30000,
   "collectCoverageFrom": [
     "**/*.js",
     "!**/node_modules/**",
     "!**/tests/**",
+    "!**/__tests__/**",
     "!**/coverage/**"
   ],
   "silent": false,
