@@ -47,3 +47,14 @@ jobs:
             audit-root.json
             audit-backend.json
             audit-frontend.json
+
+      - name: Notify on audit failure (optional)
+        if: failure() && secrets.AUDIT_WEBHOOK_URL
+        env:
+          WEBHOOK_URL: ${{ secrets.AUDIT_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.run_url }}
+        run: |
+          echo "Sending audit failure notification to webhook"
+          body="{\"text\": \"[${REPO}] npm audit detected vulnerabilities. See CI run: ${RUN_URL}\"}"
+          curl -s -X POST -H 'Content-Type: application/json' -d "$body" "$WEBHOOK_URL" || echo 'Webhook notify failed'
