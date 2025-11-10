@@ -29,7 +29,7 @@ function SourceCitations() {
       const data = await fetchSources()
       setSources(data.sources || [])
       setLoading(false)
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error fetching sources:', error)
       // Use fallback data
       setSources([

@@ -68,7 +68,7 @@ export function sanitizeString(input: string | null | undefined): string {
 /**
  * Sanitize an object's string properties
  */
-function sanitizeObject(obj: any): any {
+function sanitizeObject(obj: unknown): unknown {
   if (typeof obj !== 'object' || obj === null) {
     return obj;
   }
@@ -77,12 +77,12 @@ function sanitizeObject(obj: any): any {
     return obj.map(item => sanitizeObject(item));
   }
 
-  const sanitized: any = {};
-  for (const [key, value] of Object.entries(obj)) {
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
     if (typeof value === 'string') {
       sanitized[key] = sanitizeString(value);
     } else if (typeof value === 'object') {
-      sanitized[key] = sanitizeObject(value);
+      sanitized[key] = sanitizeObject(value as unknown);
     } else {
       sanitized[key] = value;
     }
@@ -113,7 +113,7 @@ export async function fetchShutdowns() {
  * Fetch news articles from API
  */
 export async function fetchNews(query?: string, pageSize?: number, sortBy?: string) {
-  const params: any = {};
+  const params: Record<string, unknown> = {};
   if (query) params.query = sanitizeString(query);
   if (pageSize) params.pageSize = pageSize;
   if (sortBy) params.sortBy = sortBy;
@@ -126,7 +126,7 @@ export async function fetchNews(query?: string, pageSize?: number, sortBy?: stri
  * Fetch top headlines from API
  */
 export async function fetchHeadlines(category?: string, country?: string, pageSize?: number) {
-  const params: any = {};
+  const params: Record<string, unknown> = {};
   if (category) params.category = category;
   if (country) params.country = country;
   if (pageSize) params.pageSize = pageSize;
