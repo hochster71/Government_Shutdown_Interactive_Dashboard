@@ -29,3 +29,8 @@ Thumbs.db
 # Cache
 .cache/
 *.log
+backend/server.js.backup
+
+# Test coverage
+coverage/
+.nyc_output/

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { fetchSources } from '../utils/api'
+import { logger } from '../utils/logger'
 
 /**
  * Source Citations Component
@@ -19,17 +21,16 @@ function SourceCitations() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchSources()
+    loadSources()
   }, [])
 
-  const fetchSources = async () => {
+  const loadSources = async () => {
     try {
-      const response = await fetch('/api/sources')
-      const data = await response.json()
+      const data = await fetchSources()
       setSources(data.sources || [])
       setLoading(false)
-    } catch (error) {
-      console.error('Error fetching sources:', error)
+    } catch (error: any) {
+      logger.error('Error fetching sources:', error)
       // Use fallback data
       setSources([
         {

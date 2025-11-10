@@ -34,6 +34,42 @@ function ImpactCalculator() {
   const [result, setResult] = useState<ImpactResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [validationErrors, setValidationErrors] = useState<{
+    duration?: string
+    workers?: string
+  }>({})
+
+  const validateInputs = (): boolean => {
+    const errors: { duration?: string; workers?: string } = {}
+
+    if (duration < 1 || duration > 365) {
+      errors.duration = 'Duration must be between 1 and 365 days'
+    }
+
+    if (affectedWorkers < 1000 || affectedWorkers > 3000000) {
+      errors.workers = 'Affected workers must be between 1,000 and 3,000,000'
+    }
+
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const handleDurationChange = (value: number) => {
+    const sanitized = Math.max(1, Math.min(365, Math.floor(value)))
+    setDuration(sanitized)
+    setValidationErrors(prev => ({ ...prev, duration: undefined }))
+  }
+
+  const handleWorkersChange = (value: number) => {
+    const sanitized = Math.max(1000, Math.min(3000000, Math.floor(value)))
+    setAffectedWorkers(sanitized)
+    setValidationErrors(prev => ({ ...prev, workers: undefined }))
+  }
+
+  const handleCalculate = async () => {
+    if (!validateInputs()) {
+      return
+    }
 
   const calculateImpact = async () => {
     // Validate inputs
@@ -106,14 +142,21 @@ function ImpactCalculator() {
             min="1"
             max="365"
             value={duration}
-            onChange={(e) => setDuration(parseInt(e.target.value) || 1)}
+            onChange={(e) => handleDurationChange(parseInt(e.target.value) || 1)}
+            aria-invalid={!!validationErrors.duration}
+            aria-describedby={validationErrors.duration ? 'duration-error' : undefined}
           />
+          {validationErrors.duration && (
+            <div id="duration-error" style={{ color: 'var(--color-accent-red)', fontSize: '0.875rem', marginTop: 'var(--spacing-xs)' }}>
+              {validationErrors.duration}
+            </div>
+          )}
           <input
             type="range"
             min="1"
             max="90"
-            value={duration}
-            onChange={(e) => setDuration(parseInt(e.target.value))}
+            value={Math.min(duration, 90)}
+            onChange={(e) => handleDurationChange(parseInt(e.target.value))}
             style={{ width: '100%', marginTop: 'var(--spacing-sm)' }}
           />
         </div>
@@ -124,18 +167,25 @@ function ImpactCalculator() {
             id="workers"
             type="number"
             min="1000"
-            max="2000000"
+            max="3000000"
             step="10000"
             value={affectedWorkers}
-            onChange={(e) => setAffectedWorkers(parseInt(e.target.value) || 800000)}
+            onChange={(e) => handleWorkersChange(parseInt(e.target.value) || 800000)}
+            aria-invalid={!!validationErrors.workers}
+            aria-describedby={validationErrors.workers ? 'workers-error' : undefined}
           />
+          {validationErrors.workers && (
+            <div id="workers-error" style={{ color: 'var(--color-accent-red)', fontSize: '0.875rem', marginTop: 'var(--spacing-xs)' }}>
+              {validationErrors.workers}
+            </div>
+          )}
           <input
             type="range"
             min="100000"
             max="2000000"
             step="50000"
             value={affectedWorkers}
-            onChange={(e) => setAffectedWorkers(parseInt(e.target.value))}
+            onChange={(e) => handleWorkersChange(parseInt(e.target.value))}
             style={{ width: '100%', marginTop: 'var(--spacing-sm)' }}
           />
         </div>
@@ -143,7 +193,7 @@ function ImpactCalculator() {
 
       <button
         className="btn btn-primary"
-        onClick={calculateImpact}
+        onClick={handleCalculate}
         disabled={loading}
         style={{ width: '100%', padding: 'var(--spacing-md)' }}
       >
