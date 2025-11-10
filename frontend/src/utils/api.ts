@@ -1,169 +1,97 @@
-import axios, { AxiosError } from 'axios';
-import DOMPurify from 'isomorphic-dompurify';
+/**
+ * API Utility Module
+ * Provides centralized API calls with timeout and error handling
+ */
 
-// API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
-const API_TIMEOUT = 30000; // 30 seconds
+const DEFAULT_TIMEOUT = 15000; // 15 seconds
 
-// Create axios instance with defaults
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: API_TIMEOUT,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+/**
+ * Make a fetch request with timeout
+ */
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeout = DEFAULT_TIMEOUT
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-// Request interceptor for sanitizing outgoing data
-api.interceptors.request.use(
-  (config) => {
-    // Sanitize request data if present
-    if (config.data && typeof config.data === 'object') {
-      config.data = sanitizeObject(config.data);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timeout');
     }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
+    throw error;
   }
-);
+}
 
-// Response interceptor for consistent error handling
-api.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError) => {
-    const customError = {
-      message: 'An unexpected error occurred',
-      status: error.response?.status,
-      data: error.response?.data,
-    };
-
-    if (error.code === 'ECONNABORTED') {
-      customError.message = 'Request timeout. Please try again.';
-    } else if (error.code === 'ERR_NETWORK') {
-      customError.message = 'Network error. Please check your connection.';
-    } else if (error.response) {
-      // Server responded with error status
-      const responseData = error.response.data as any;
-      customError.message = responseData?.message || responseData?.error || customError.message;
-    } else if (error.request) {
-      customError.message = 'No response from server. Please try again later.';
+/**
+ * Make a GET request
+ */
+export async function apiGet<T>(
+  endpoint: string,
+  params?: Record<string, string | number>
+): Promise<T> {
+  try {
+    const url = new URL(endpoint, window.location.origin);
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        url.searchParams.append(key, String(value));
+      });
     }
 
-    return Promise.reject(customError);
-  }
-);
+    const response = await fetchWithTimeout(url.toString());
 
-/**
- * Sanitize a string using DOMPurify
- */
-export function sanitizeString(input: string | null | undefined): string {
-  if (!input || typeof input !== 'string') return '';
-  return DOMPurify.sanitize(input, { 
-    ALLOWED_TAGS: [],
-    ALLOWED_ATTR: [] 
-  });
-}
-
-/**
- * Sanitize an object's string properties
- */
-function sanitizeObject(obj: any): any {
-  if (typeof obj !== 'object' || obj === null) {
-    return obj;
-  }
-
-  if (Array.isArray(obj)) {
-    return obj.map(item => sanitizeObject(item));
-  }
-
-  const sanitized: any = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (typeof value === 'string') {
-      sanitized[key] = sanitizeString(value);
-    } else if (typeof value === 'object') {
-      sanitized[key] = sanitizeObject(value);
-    } else {
-      sanitized[key] = value;
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
     }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`API GET error for ${endpoint}:`, error);
+    throw error;
   }
-  return sanitized;
 }
 
 /**
- * Sanitize HTML content for safe rendering
+ * Make a POST request
  */
-export function sanitizeHtml(html: string | null | undefined): string {
-  if (!html || typeof html !== 'string') return '';
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br'],
-    ALLOWED_ATTR: ['href', 'target', 'rel']
-  });
-}
+export async function apiPost<T>(
+  endpoint: string,
+  data: unknown
+): Promise<T> {
+  try {
+    const url = new URL(endpoint, window.location.origin);
+    
+    const response = await fetchWithTimeout(url.toString(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
 
-/**
- * Fetch shutdown data from API
- */
-export async function fetchShutdowns() {
-  const response = await api.get('/api/shutdowns');
-  return response.data;
-}
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
 
-/**
- * Fetch news articles from API
- */
-export async function fetchNews(query?: string, pageSize?: number, sortBy?: string) {
-  const params: any = {};
-  if (query) params.query = sanitizeString(query);
-  if (pageSize) params.pageSize = pageSize;
-  if (sortBy) params.sortBy = sortBy;
-
-  const response = await api.get('/api/news', { params });
-  return response.data;
-}
-
-/**
- * Fetch top headlines from API
- */
-export async function fetchHeadlines(category?: string, country?: string, pageSize?: number) {
-  const params: any = {};
-  if (category) params.category = category;
-  if (country) params.country = country;
-  if (pageSize) params.pageSize = pageSize;
-
-  const response = await api.get('/api/news/headlines', { params });
-  return response.data;
-}
-
-/**
- * Calculate economic impact
- */
-export async function calculateImpact(duration: number, affectedWorkers?: number, year?: number) {
-  // Validate inputs before sending
-  if (duration < 1 || duration > 365) {
-    throw new Error('Duration must be between 1 and 365 days');
+    return await response.json();
+  } catch (error) {
+    console.error(`API POST error for ${endpoint}:`, error);
+    throw error;
   }
-  if (affectedWorkers !== undefined && (affectedWorkers < 1000 || affectedWorkers > 3000000)) {
-    throw new Error('Affected workers must be between 1,000 and 3,000,000');
-  }
-  if (year !== undefined && (year < 1970 || year > 2100)) {
-    throw new Error('Year must be between 1970 and 2100');
-  }
-
-  const response = await api.post('/api/impact/calc', {
-    duration,
-    affectedWorkers,
-    year,
-  });
-  return response.data;
 }
 
-/**
- * Fetch data sources
- */
-export async function fetchSources() {
-  const response = await api.get('/api/sources');
-  return response.data;
-}
-
-export default api;
+export default {
+  get: apiGet,
+  post: apiPost,
+};
