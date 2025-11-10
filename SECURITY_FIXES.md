@@ -48,7 +48,13 @@ Follow-ups / notes
 - Upgrading `pino` and `vite` were semver-major changes. While tests and builds passed locally, these are significant upgrades and should be observed in staging/CI for regressions.
 - Consider upgrading `pino-pretty` to a major release aligned with `pino@10` in a follow-up if additional formatting or features are desired.
 - Consider adding an automated weekly `npm audit` job in CI to catch drift.
+- Consider adding an automated weekly `npm audit` job in CI to catch drift. A workflow has been added at `.github/workflows/weekly-npm-audit.yml`.
 
-If you'd like, I can:
-- Open a PR with these changes and a short description for review.
-- Bump `pino-pretty` or perform additional code-level hardening (e.g., CSP tightening for production) as a follow-up.
+Follow-up actions performed in this session:
+- Tightened CSP for production and added support for a comma-separated `ALLOWED_ORIGINS` allowlist used by the CORS middleware and CSP connect-src (see `backend/security/helmetOptions.js`).
+- Bumped `pino-pretty` to `^11.0.0` to align with `pino@10`.
+- Added an optional webhook notification step to the audit workflow; set `AUDIT_WEBHOOK_URL` in repository secrets to enable Slack/Teams notifications on audit failure.
+
+If you'd like additional help, I can:
+- Open separate PRs for each follow-up (CSP, CORS allowlist, pino-pretty bump, audit notifications) — PRs have been created in this session for review in CI/staging.
+- Further tighten CSP by removing inline scripts/styles from the frontend build or adding SRI/hashes if needed.
