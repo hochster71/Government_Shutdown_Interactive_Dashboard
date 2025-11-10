@@ -1,0 +1,212 @@
+{
+  "fetched_at": "20251110T223331Z",
+  "sources": [
+    {
+      "source": "New York Times",
+      "url": "https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml",
+      "items": [
+        {
+          "title": "Travelers Battle More Flight Disruptions Amid Shutdown Talks",
+          "url": "https://www.nytimes.com/2025/11/10/us/flights-cancellations-delays-airports-shutdown.html",
+          "publishedAt": "Mon, 10 Nov 2025 22:23:49 +0000",
+          "description": "The travel turmoil led some fliers to embark on time-consuming detours as they monitored talks in Washington to end the government shutdown."
+        },
+        {
+          "title": "Groups Sue to Reverse Trump’s Cuts to Energy Projects in Democratic States",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/trump-shutdown-cuts-lawsuit.html",
+          "publishedAt": "Mon, 10 Nov 2025 21:29:03 +0000",
+          "description": "A lawsuit filed on Monday argued that the president has discriminated against blue states by slashing federal funds for political leverage during the shutdown."
+        },
+        {
+          "title": "Spending Bill Would Pave Way for Senators to Sue Over Phone Searches",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/senators-shutdown-smith-phone-searches.html",
+          "publishedAt": "Mon, 10 Nov 2025 22:01:51 +0000",
+          "description": "Republicans have voiced outrage that Jack Smith looked at G.O.P. lawmakers’ phone records surrounding the Jan. 6 attack. Legislation to reopen the government would allow them to sue for $500,000 each."
+        },
+        {
+          "title": "More Flight Troubles Expected Before the Shutdown Ends",
+          "url": "https://www.nytimes.com/2025/11/10/business/airlines-cancellations-senate-deal.html",
+          "publishedAt": "Mon, 10 Nov 2025 19:54:17 +0000",
+          "description": "Airlines brace for further chaos, even as eight Democratic senators broke ranks with their party to back a deal that could end the shutdown."
+        },
+        {
+          "title": "Jeanne Shaheen Faces Shutdown Blowback From Her Daughter",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/jeanne-shaheen-stefany-shutdown-deal.html",
+          "publishedAt": "Mon, 10 Nov 2025 18:01:10 +0000",
+          "description": "Senator Jeanne Shaheen of New Hampshire voted to move to end the shutdown. But her daughter Stefany Shaheen, a congressional candidate in their state, sharply criticized the deal."
+        },
+        {
+          "title": "Supreme Court to Hear Major Challenge to Mail-In Ballot Laws",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/supreme-court-mail-ballots-mississippi.html",
+          "publishedAt": "Mon, 10 Nov 2025 18:45:56 +0000",
+          "description": "The justices agreed to hear a challenge to Mississippi’s law, a case that could upend similar measures in dozens of states before the 2026 election."
+        },
+        {
+          "title": "Supreme Court Denies Request to Revisit Same-Sex Marriage Decision",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/supreme-court-same-sex-marriage.html",
+          "publishedAt": "Mon, 10 Nov 2025 20:26:18 +0000",
+          "description": "Kim Davis, a Kentucky county clerk who refused to issue same-sex marriage licenses, had asked the court to reconsider its landmark 2015 opinion."
+        },
+        {
+          "title": "Bernie Sanders Endorses Peggy Flanagan for Senate in Minnesota",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/bernie-sanders-peggy-flanagan-michigan-senate-endorsement.html",
+          "publishedAt": "Mon, 10 Nov 2025 14:00:06 +0000",
+          "description": "Senator Bernie Sanders is backing Lt. Gov. Peggy Flanagan in her state’s Democratic primary race for Senate, his latest attempt to pull the party to the left."
+        },
+        {
+          "title": "U.S. Military Kills 6 in Strikes on Suspected Drug Boats, Hegseth Says",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/us-boat-strike-deaths-hegseth.html",
+          "publishedAt": "Mon, 10 Nov 2025 14:27:57 +0000",
+          "description": "The latest strikes raised the death toll in the campaign to 76 people in 19 attacks in the Pacific and the Caribbean Sea since early September."
+        },
+        {
+          "title": "Trump Administration Returns to Supreme Court in Food Stamp Fight",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/appeals-court-trump-snap-funding-shutdown.html",
+          "publishedAt": "Mon, 10 Nov 2025 21:39:50 +0000",
+          "description": "But the administration indicated it might not be necessary, as Congress inched toward a deal to fund the government."
+        },
+        {
+          "title": "Which Senators Broke Ranks With Democrats to Advance the GOP Plan to End the Government Shutdown?",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/senators-democrat-shutdown-vote.html",
+          "publishedAt": "Mon, 10 Nov 2025 20:10:29 +0000",
+          "description": "Two of them are retiring, and none of the others face re-election in 2026."
+        },
+        {
+          "title": "Here’s the latest.",
+          "url": "https://www.nytimes.com/live/2025/11/10/us/trump-government-shutdown-news/heres-the-latest",
+          "publishedAt": "Mon, 10 Nov 2025 21:56:28 +0000",
+          "description": ""
+        },
+        {
+          "title": "Syria’s President Meets Trump at White House for First Time",
+          "url": "https://www.nytimes.com/2025/11/10/world/middleeast/syria-president-al-shara-trump-washington.html",
+          "publishedAt": "Mon, 10 Nov 2025 21:02:24 +0000",
+          "description": "The visit by President Ahmed al-Shara is another step in the transformation of the former rebel leader once wanted by the United States as a terrorist."
+        },
+        {
+          "title": "F.B.I. Director Is Said to Have Made a Pledge to Head of MI5, Then Broken It",
+          "url": "https://www.nytimes.com/2025/11/10/world/europe/kash-patel-fbi-mi5.html",
+          "publishedAt": "Mon, 10 Nov 2025 16:41:56 +0000",
+          "description": "The episode has contributed to concerns among intelligence allies that Kash Patel, brash and partisan, is also unpredictable and even unreliable."
+        },
+        {
+          "title": "Trump Tries to Seize ‘Affordability’ as Americans’ Economic Worries Grow",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/trump-affordability-inflation-democrats.html",
+          "publishedAt": "Mon, 10 Nov 2025 16:47:20 +0000",
+          "description": "The issue has buoyed Democrats and is resonating with an American electorate that is souring on the president’s economic agenda."
+        },
+        {
+          "title": "R.F.K. Allies Embrace ‘Anti-Vax’ Label They Once Rejected",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/anti-vaccine-autism-kennedy.html",
+          "publishedAt": "Mon, 10 Nov 2025 14:54:43 +0000",
+          "description": "A weekend gathering in Texas drew activists, homeopaths, doctors, lawyers, parents and a Republican senator who asked, “Why isn’t Tony Fauci in prison?”"
+        },
+        {
+          "title": "Democrat’s Win May Upend a Conservative Push in Virginia Universities",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/spanberger-democrat-virginia-higher-education.html",
+          "publishedAt": "Mon, 10 Nov 2025 15:01:03 +0000",
+          "description": "Supporters of Abigail Spanberger, Virginia’s governor-elect, say they expect her to reverse efforts to impose conservative priorities on the state’s prestigious public university system."
+        },
+        {
+          "title": "Federal Cuts, Immigration Raids and a Slowing Economy Hit Rural Libraries",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/rural-libraries.html",
+          "publishedAt": "Mon, 10 Nov 2025 10:01:53 +0000",
+          "description": "Like many rural small towns, Tieton, Wash., is facing a confluence of circumstances that has made keeping its one-room library, a “civic symbol” for the town, untenable."
+        },
+        {
+          "title": "Six Takeaways From the Senate Deal to End the Shutdown",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/takeaways-senate-democrats-shutdown.html",
+          "publishedAt": "Mon, 10 Nov 2025 14:41:37 +0000",
+          "description": "For 40 days, Senator Chuck Schumer kept his caucus unified. But an end approached without an extension of expiring health insurance subsidies that Democrats had demanded."
+        },
+        {
+          "title": "Sean Duffy Juggles Shutdown Roles on Flight Safety and Trump Support",
+          "url": "https://www.nytimes.com/2025/11/09/us/politics/duffy-faa-air-travel-shutdown.html",
+          "publishedAt": "Mon, 10 Nov 2025 04:14:40 +0000",
+          "description": "With near-daily TV appearances, the transportation secretary has emerged as the face of the Trump administration amid the shutdown."
+        }
+      ]
+    },
+    {
+      "source": "AP",
+      "url": "https://apnews.com/hub/politics/rss",
+      "items": []
+    },
+    {
+      "source": "NPR",
+      "url": "https://feeds.npr.org/1001/rss.xml",
+      "items": [
+        {
+          "title": "Public safety groups face an uncertain future months after federal grant cuts",
+          "url": "https://www.npr.org/2025/11/10/nx-s1-5552704/doj-crime-prevention-public-safety-grant-cuts",
+          "publishedAt": "Mon, 10 Nov 2025 17:00:27 -0500",
+          "description": "Six months after the Trump administration cut more than $800 million in Justice Department grants geared toward public safety, the organizations affected are adjusting to a future without that money."
+        },
+        {
+          "title": "Trump slams air traffic controllers who called out during the government shutdown",
+          "url": "https://www.npr.org/2025/11/10/nx-s1-5604664/trump-air-traffic-controllers-forced-time-off-bonus",
+          "publishedAt": "Mon, 10 Nov 2025 15:19:15 -0500",
+          "description": "Trump said on social media that he wasn't happy with controllers who called out of work, and suggested a $10,000 bonus for those who didn't take any time off during the shutdown."
+        },
+        {
+          "title": "'Death by Lightning' unfolds like an 1880s 'West Wing'",
+          "url": "https://www.npr.org/2025/11/10/nx-s1-5604211/death-by-lightning-review-garfield-assassination",
+          "publishedAt": "Mon, 10 Nov 2025 11:41:29 -0500",
+          "description": "Netflix's new four-part miniseries dives into the plot to assassinate President James Garfield. <em>Death by Lightning </em> is full of recognizable arrogance, political intrigue and unexpected betrayal."
+        },
+        {
+          "title": "The FDA will lift warnings on hormone therapy for menopause",
+          "url": "https://www.npr.org/sections/shots-health-news/2025/11/10/nx-s1-5604283/fda-menopause-hormone-therapy",
+          "publishedAt": "Mon, 10 Nov 2025 11:05:31 -0500",
+          "description": "Hormone therapy drugs have carried box warning labels for years. The Food and Drug Administration is removing them, saying the risks were overstated."
+        },
+        {
+          "title": "Car explosion near Red Fort in India's capital kills at least 8 people, police say",
+          "url": "https://www.npr.org/2025/11/10/g-s1-97197/india-red-fort-explosion-new-delhi",
+          "publishedAt": "Mon, 10 Nov 2025 11:05:05 -0500",
+          "description": "A car exploded near the 17th century Red Fort in New Delhi on Monday, killing at least eight people, injuring others and triggering a fire that damaged vehicles parked nearby, New Delhi police said."
+        },
+        {
+          "title": "Supreme Court declines to revisit gay marriage decision",
+          "url": "https://www.npr.org/2025/11/10/nx-s1-5604293/scotus-rejects-gay-marriage-appeal",
+          "publishedAt": "Mon, 10 Nov 2025 10:48:32 -0500",
+          "description": "The challenge to the court's 2015 ruling came from Kim Davis, the former Kentucky clerk who refused to issue same-sex licenses after the court's Obergefell v. Hodges decision, which recognized a constitutional right to same-sex marriage."
+        },
+        {
+          "title": "Syrian President Sharaa makes the 1st White House visit by a Syrian head of state",
+          "url": "https://www.npr.org/2025/11/10/g-s1-97172/syria-sharaa-trump-white-house",
+          "publishedAt": "Mon, 10 Nov 2025 10:14:26 -0500",
+          "description": "President Trump hosted Syrian President Ahmed al-Sharaa at the White House, welcoming the once-pariah state into a U.S.-led global coalition to fight the Islamic State group."
+        },
+        {
+          "title": "Who has President Trump pardoned and why?",
+          "url": "https://www.npr.org/2025/11/10/nx-s1-5587875/trump-pardons-insider-political-orbit-second-term",
+          "publishedAt": "Mon, 10 Nov 2025 10:04:24 -0500",
+          "description": "This week, President Trump pardoned allies accused of trying to overturn the 2020 presidential election. It is part of an uptick in \"insider pardons\" issued in his second term, one legal expert says."
+        },
+        {
+          "title": "Senators reach deal to reopen the government. And, countries gather for climate talks",
+          "url": "https://www.npr.org/2025/11/10/g-s1-97152/up-first-newsletter-government-shutdown-snap-benefits-cop30",
+          "publishedAt": "Mon, 10 Nov 2025 07:29:29 -0500",
+          "description": "Several Senate Democrats break ranks to join Republicans in a deal to reopen the government. And, world leaders gather in Brazil for a major climate conference, but the U.S. is not expected to attend."
+        },
+        {
+          "title": "Trump grants pardons to Giuliani, Meadows, others linked to 2020 election efforts",
+          "url": "https://www.npr.org/2025/11/10/nx-s1-5604174/trump-pardons-2020-election",
+          "publishedAt": "Mon, 10 Nov 2025 06:55:13 -0500",
+          "description": "The pardons include 77 allies tied to efforts to overturn the 2020 election, including Rudy Giuliani, former White House Chief of Staff Mark Meadows, and former Trump attorney Sidney Powell."
+        }
+      ]
+    },
+    {
+      "source": "Politico",
+      "url": "https://www.politico.com/rss/politics08.xml",
+      "items": []
+    },
+    {
+      "source": "Reuters",
+      "url": "https://www.reutersagency.com/feed/?best-topics=politics&post_type=best",
+      "items": []
+    }
+  ]
+}
