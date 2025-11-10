@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { apiGet } from '../utils/api'
 import Timeline from './Timeline'
 import SankeyDiagram from './SankeyDiagram'
 import ImpactCalculator from './ImpactCalculator'
@@ -46,15 +47,13 @@ function Dashboard() {
       setLoading(true)
       setError(null)
 
-      logger.info('Fetching dashboard data')
-
-      // Fetch shutdown data using centralized API
-      const shutdownData = await fetchShutdowns()
+      // Fetch shutdown data using API utility with timeout
+      const shutdownData = await apiGet<{ data: ShutdownData[] }>('/api/shutdowns')
       setShutdowns(shutdownData.data || [])
 
-      // Fetch news (optional)
+      // Fetch news (optional) using API utility
       try {
-        const newsData = await fetchNews(undefined, 10)
+        const newsData = await apiGet<{ articles: NewsArticle[] }>('/api/news', { pageSize: '10' })
         setNews(newsData.articles || [])
       } catch (newsError: any) {
         logger.warn('News fetch failed (optional):', newsError)

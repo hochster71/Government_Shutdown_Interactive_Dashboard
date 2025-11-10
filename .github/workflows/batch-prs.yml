@@ -1,0 +1,49 @@
+name: Scheduled PR batching
+
+on:
+  schedule:
+    # Default: every 6 hours. Change as needed (cron expression).
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      batch_size:
+        description: 'Number of PRs per batch'
+        required: false
+        default: '5'
+      live:
+        description: 'Set to true to run live (not dry-run). Requires repo secret ALLOW_BATCH_MERGE=true.'
+        required: false
+        default: 'false'
+
+jobs:
+  batch:
+    name: Run batching script
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Authenticate GitHub CLI
+        uses: cli/gh-action@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run batching script
+        env:
+          BATCH_SIZE: ${{ inputs.batch_size }}
+          LIVE: ${{ inputs.live }}
+          ALLOW_BATCH_MERGE: ${{ secrets.ALLOW_BATCH_MERGE }}
+        run: |
+          echo "Batch size: $BATCH_SIZE; live: $LIVE; allow_secret: ${ALLOW_BATCH_MERGE:+***}"
+          if [ "$LIVE" = "true" ] && [ "$ALLOW_BATCH_MERGE" = "true" ]; then
+            echo "Running batching in LIVE mode (auto-merge will be scheduled)."
+            python3 scripts/apply_batching.py --batch-size "$BATCH_SIZE"
+          else
+            echo "Running batching in DRY-RUN mode (no changes). To run live, set workflow input 'live=true' and set repository secret 'ALLOW_BATCH_MERGE' to 'true'."
+            python3 scripts/apply_batching.py --batch-size "$BATCH_SIZE" --dry-run
+          fi

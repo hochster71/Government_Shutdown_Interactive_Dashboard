@@ -7,8 +7,17 @@
     <meta name="description" content="Interactive dashboard for US Government Shutdown data visualization" />
     <meta name="author" content="Michael Hoch" />
     <meta name="keywords" content="government, shutdown, dashboard, visualization, data" />
-    <!-- Content Security Policy guidance - aligned with server CSP -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' http://localhost:3001; font-src 'self'; object-src 'none'; frame-src 'none';">
+    <!-- Content Security Policy for enhanced security -->
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self'; 
+                   script-src 'self' 'unsafe-inline' 'unsafe-eval'; 
+                   style-src 'self' 'unsafe-inline'; 
+                   img-src 'self' data: https:; 
+                   font-src 'self' data:; 
+                   connect-src 'self' http://localhost:3001 https://*.newsapi.org https://en.wikipedia.org; 
+                   frame-ancestors 'none'; 
+                   base-uri 'self'; 
+                   form-action 'self';">
     <title>US Government Shutdown Dashboard</title>
   </head>
   <body>

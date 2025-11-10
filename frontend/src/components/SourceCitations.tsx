@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchSources } from '../utils/api'
-import { logger } from '../utils/logger'
+import { apiGet } from '../utils/api'
 
 /**
  * Source Citations Component
@@ -26,7 +25,7 @@ function SourceCitations() {
 
   const loadSources = async () => {
     try {
-      const data = await fetchSources()
+      const data = await apiGet<{ sources: Source[] }>('/api/sources')
       setSources(data.sources || [])
       setLoading(false)
     } catch (error: any) {
