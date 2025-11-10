@@ -1,0 +1,6 @@
+// jest.config.cjs
+module.exports = {
+  testEnvironment: 'node',
+  testTimeout: 15000,
+  transform: {}
+};
