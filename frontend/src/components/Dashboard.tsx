@@ -4,6 +4,8 @@ import Timeline from './Timeline'
 import SankeyDiagram from './SankeyDiagram'
 import ImpactCalculator from './ImpactCalculator'
 import SourceCitations from './SourceCitations'
+import { fetchShutdowns, fetchNews, sanitizeString } from '../utils/api'
+import { logger } from '../utils/logger'
 
 /**
  * Dashboard Component
@@ -53,14 +55,15 @@ function Dashboard() {
       try {
         const newsData = await apiGet<{ articles: NewsArticle[] }>('/api/news', { pageSize: '10' })
         setNews(newsData.articles || [])
-      } catch (newsError) {
-        console.warn('News fetch failed (optional):', newsError)
+      } catch (newsError: any) {
+        logger.warn('News fetch failed (optional):', newsError)
       }
 
+      logger.info('Dashboard data loaded successfully')
       setLoading(false)
-    } catch (err) {
-      console.error('Error fetching data:', err)
-      setError('Failed to load dashboard data. Please try again.')
+    } catch (err: any) {
+      logger.error('Error fetching data:', err)
+      setError(sanitizeString(err.message || 'Failed to load dashboard data. Please try again.'))
       setLoading(false)
     }
   }
@@ -90,68 +93,84 @@ function Dashboard() {
   }
 
   return (
-    <div className="dashboard">
-      {/* Statistics Cards */}
+    <div className="dashboard fade-in">
+      {/* Statistics Cards - Enhanced */}
       <div className="grid grid-cols-3" style={{ marginBottom: 'var(--spacing-xl)' }}>
-        <div className="card">
+        <div className="card stat-card glow-on-hover">
           <div className="card-body text-center">
-            <h3 style={{ 
-              fontSize: '2.5rem', 
-              color: 'var(--color-accent-blue)',
-              marginBottom: 'var(--spacing-sm)'
+            <div style={{ fontSize: '3rem', marginBottom: 'var(--spacing-xs)' }}>📊</div>
+            <h3 className="gradient-text" style={{ 
+              fontSize: '3rem', 
+              marginBottom: 'var(--spacing-sm)',
+              fontWeight: '800'
             }}>
               {shutdowns.length}
             </h3>
             <p style={{ 
-              fontSize: '0.875rem', 
-              color: 'var(--color-text-muted)',
-              marginBottom: 0
+              fontSize: '0.9rem', 
+              color: 'var(--color-text-secondary)',
+              marginBottom: 0,
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: '1px'
             }}>
-              Total Shutdowns Recorded
+              Total Shutdowns
             </p>
           </div>
         </div>
 
-        <div className="card">
+        <div className="card stat-card glow-on-hover">
           <div className="card-body text-center">
+            <div style={{ fontSize: '3rem', marginBottom: 'var(--spacing-xs)' }}>⏱️</div>
             <h3 style={{ 
-              fontSize: '2.5rem', 
+              fontSize: '3rem', 
               color: 'var(--color-accent-purple)',
-              marginBottom: 'var(--spacing-sm)'
+              marginBottom: 'var(--spacing-sm)',
+              fontWeight: '800',
+              textShadow: '0 0 20px rgba(139, 92, 246, 0.5)'
             }}>
               34
             </h3>
             <p style={{ 
-              fontSize: '0.875rem', 
-              color: 'var(--color-text-muted)',
-              marginBottom: 0
+              fontSize: '0.9rem', 
+              color: 'var(--color-text-secondary)',
+              marginBottom: 0,
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: '1px'
             }}>
               Longest Shutdown (Days)
             </p>
           </div>
         </div>
 
-        <div className="card">
+        <div className="card stat-card glow-on-hover">
           <div className="card-body text-center">
+            <div style={{ fontSize: '3rem', marginBottom: 'var(--spacing-xs)' }}>📰</div>
             <h3 style={{ 
-              fontSize: '2.5rem', 
+              fontSize: '3rem', 
               color: 'var(--color-accent-green)',
-              marginBottom: 'var(--spacing-sm)'
+              marginBottom: 'var(--spacing-sm)',
+              fontWeight: '800',
+              textShadow: '0 0 20px rgba(16, 185, 129, 0.5)'
             }}>
               {news.length}
             </h3>
             <p style={{ 
-              fontSize: '0.875rem', 
-              color: 'var(--color-text-muted)',
-              marginBottom: 0
+              fontSize: '0.9rem', 
+              color: 'var(--color-text-secondary)',
+              marginBottom: 0,
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: '1px'
             }}>
-              Recent News Articles
+              Recent News
             </p>
           </div>
         </div>
       </div>
 
-      {/* Tab Navigation */}
+      {/* Tab Navigation - Enhanced */}
       <div className="card" style={{ marginBottom: 'var(--spacing-lg)' }}>
         <div style={{ 
           display: 'flex', 
@@ -161,21 +180,21 @@ function Dashboard() {
           paddingBottom: '0'
         }}>
           <button
-            className={`btn ${activeTab === 'timeline' ? 'btn-primary' : 'btn-secondary'}`}
+            className={`btn tab-button ${activeTab === 'timeline' ? 'btn-primary active' : 'btn-secondary'}`}
             onClick={() => setActiveTab('timeline')}
             style={{ borderRadius: 'var(--radius-md) var(--radius-md) 0 0' }}
           >
             📊 Timeline
           </button>
           <button
-            className={`btn ${activeTab === 'sankey' ? 'btn-primary' : 'btn-secondary'}`}
+            className={`btn tab-button ${activeTab === 'sankey' ? 'btn-primary active' : 'btn-secondary'}`}
             onClick={() => setActiveTab('sankey')}
             style={{ borderRadius: 'var(--radius-md) var(--radius-md) 0 0' }}
           >
             🔄 Sankey Diagram
           </button>
           <button
-            className={`btn ${activeTab === 'calculator' ? 'btn-primary' : 'btn-secondary'}`}
+            className={`btn tab-button ${activeTab === 'calculator' ? 'btn-primary active' : 'btn-secondary'}`}
             onClick={() => setActiveTab('calculator')}
             style={{ borderRadius: 'var(--radius-md) var(--radius-md) 0 0' }}
           >

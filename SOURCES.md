@@ -45,7 +45,7 @@ This dashboard was created by **Michael Hoch** as an educational tool for unders
 
 ## Updates and Corrections
 
-Data sources are regularly updated. If you notice any inaccuracies, please open an issue in the GitHub repository.
+Data sources are automatically updated every 6 hours using a secure scheduling system. The dashboard is currently tracking the ongoing 2025 government shutdown (started October 1, 2025). If you notice any inaccuracies, please open an issue in the GitHub repository.
 
 ## Third-Party Libraries
 

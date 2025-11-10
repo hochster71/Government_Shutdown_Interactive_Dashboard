@@ -1,7 +1,5 @@
-import axios from 'axios';
-
 /**
- * NewsAPI Adapter - Proxies requests to NewsAPI
+ * NewsAPI Adapter - Proxies requests to NewsAPI using native fetch
  * Documentation: https://newsapi.org/docs
  */
 
@@ -36,7 +34,7 @@ async function fetchWithTimeout(url, params, timeout = REQUEST_TIMEOUT) {
  * Fetch news articles about government shutdowns
  * @param {string} apiKey - NewsAPI key
  * @param {Object} options - Query options
- * @returns {Promise<Array>} Array of news articles
+ * @returns {Promise<Object>} News data with articles
  */
 export async function fetchNews(apiKey, options = {}) {
   if (!apiKey || apiKey === 'your_newsapi_key_here') {
@@ -49,7 +47,7 @@ export async function fetchNews(apiKey, options = {}) {
 
   try {
     const query = options.query || DEFAULT_QUERY;
-    const pageSize = options.pageSize || 20;
+    const pageSize = Math.min(options.pageSize || 20, MAX_ARTICLES);
     const language = options.language || 'en';
     const sortBy = options.sortBy || 'publishedAt';
 
@@ -61,27 +59,31 @@ export async function fetchNews(apiKey, options = {}) {
       apiKey
     });
 
-    if (response.data.status === 'ok') {
-      // Transform articles to compact format
-      const articles = response.data.articles.map((article, index) => ({
+    const response = await fetchWithTimeout(url.toString(), 10000);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (!validateResponse(data)) {
+      throw new Error(data.message || 'Invalid response from NewsAPI');
+    }
+
+    // Transform and sanitize articles to compact format
+    const articles = data.articles
+      .slice(0, MAX_ARTICLES)
+      .map((article, index) => ({
         id: index + 1,
-        title: article.title,
-        description: article.description,
-        url: article.url,
-        source: article.source.name,
-        author: article.author,
-        publishedAt: article.publishedAt,
-        urlToImage: article.urlToImage
+        ...sanitizeArticle(article)
       }));
 
-      return {
-        articles,
-        totalResults: response.data.totalResults,
-        message: null
-      };
-    } else {
-      throw new Error(response.data.message || 'NewsAPI returned error status');
-    }
+    return {
+      articles,
+      totalResults: Math.min(data.totalResults, MAX_ARTICLES),
+      message: null
+    };
   } catch (error) {
     console.error('Error fetching news:', error.message);
     
@@ -99,7 +101,7 @@ export async function fetchNews(apiKey, options = {}) {
  * Fetch top headlines about government/politics
  * @param {string} apiKey - NewsAPI key
  * @param {Object} options - Query options
- * @returns {Promise<Array>} Array of news articles
+ * @returns {Promise<Object>} News data with articles
  */
 export async function fetchTopHeadlines(apiKey, options = {}) {
   if (!apiKey || apiKey === 'your_newsapi_key_here') {
@@ -113,7 +115,7 @@ export async function fetchTopHeadlines(apiKey, options = {}) {
   try {
     const category = options.category || 'politics';
     const country = options.country || 'us';
-    const pageSize = options.pageSize || 10;
+    const pageSize = Math.min(options.pageSize || 10, MAX_ARTICLES);
 
     const response = await fetchWithTimeout(`${NEWS_API_BASE_URL}/top-headlines`, {
       category,
@@ -122,26 +124,31 @@ export async function fetchTopHeadlines(apiKey, options = {}) {
       apiKey
     });
 
-    if (response.data.status === 'ok') {
-      const articles = response.data.articles.map((article, index) => ({
+    const response = await fetchWithTimeout(url.toString(), 10000);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (!validateResponse(data)) {
+      throw new Error(data.message || 'Invalid response from NewsAPI');
+    }
+
+    // Transform and sanitize articles
+    const articles = data.articles
+      .slice(0, MAX_ARTICLES)
+      .map((article, index) => ({
         id: index + 1,
-        title: article.title,
-        description: article.description,
-        url: article.url,
-        source: article.source.name,
-        author: article.author,
-        publishedAt: article.publishedAt,
-        urlToImage: article.urlToImage
+        ...sanitizeArticle(article)
       }));
 
-      return {
-        articles,
-        totalResults: response.data.totalResults,
-        message: null
-      };
-    } else {
-      throw new Error(response.data.message || 'NewsAPI returned error status');
-    }
+    return {
+      articles,
+      totalResults: Math.min(data.totalResults, MAX_ARTICLES),
+      message: null
+    };
   } catch (error) {
     console.error('Error fetching top headlines:', error.message);
     
@@ -156,5 +163,6 @@ export async function fetchTopHeadlines(apiKey, options = {}) {
 
 export default {
   fetchNews,
-  fetchTopHeadlines
+  fetchTopHeadlines,
+  fetchWithTimeout
 };

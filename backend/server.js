@@ -7,11 +7,30 @@ import rateLimit from 'express-rate-limit';
 import { body, query, validationResult } from 'express-validator';
 import NodeCache from 'node-cache';
 import dotenv from 'dotenv';
+import pino from 'pino';
+import pinoHttp from 'pino-http';
 import { fetchShutdowns } from './adapters/wiki.js';
 import { fetchNews, fetchTopHeadlines } from './adapters/newsapi.js';
+import { initUpdateScheduler } from './services/updateScheduler.js';
 
 // Load environment variables
 dotenv.config({ path: '../.env' });
+
+// Fail fast if global fetch is not available
+if (typeof fetch === 'undefined') {
+  console.error('❌ FATAL: Global fetch is not available. Please use Node.js 18 or later.');
+  process.exit(1);
+}
+
+// Configure structured logging
+const logLevel = process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug');
+const logger = pino({
+  level: process.env.NODE_ENV === 'test' ? 'silent' : logLevel,
+  transport: (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') ? {
+    target: 'pino-pretty',
+    options: { colorize: true }
+  } : undefined
+});
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -103,12 +122,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// Rate limiting: max 100 requests per 15 minutes
+// Rate limiting: max 100 requests per 15 minutes with informative headers
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  message: 'Too many requests from this IP, please try again later.',
-  standardHeaders: true,
+  message: { error: 'Too many requests from this IP, please try again later.' },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false,
   skipSuccessfulRequests: false,
   skipFailedRequests: false,
@@ -127,7 +146,11 @@ const postLimiter = rateLimit({
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    scheduler: updateScheduler ? 'active' : 'inactive'
+  });
 });
 
 /**
@@ -192,10 +215,10 @@ app.get('/api/shutdowns', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error in /api/shutdowns:', error);
+    logger.error({ error: error.message, stack: error.stack }, 'Error in /api/shutdowns');
     res.status(500).json({
       error: 'Failed to fetch shutdown data',
-      message: error.message
+      message: isProduction ? 'An error occurred while fetching data' : error.message
     });
   }
 });
@@ -313,10 +336,10 @@ app.get('/api/news/headlines', [
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error in /api/news/headlines:', error);
+    logger.error({ error: error.message, stack: error.stack }, 'Error in /api/news/headlines');
     res.status(500).json({
       error: 'Failed to fetch headlines',
-      message: error.message,
+      message: isProduction ? 'An error occurred while fetching headlines' : error.message,
       articles: []
     });
   }
@@ -424,6 +447,13 @@ app.post('/api/impact/calc', postLimiter, [
   }
 });
 
+// Serve static assets with cache headers
+app.use('/static', express.static('public', {
+  maxAge: '1d',
+  etag: true,
+  lastModified: true
+}));
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
@@ -441,7 +471,7 @@ app.use((req, res) => {
   });
 });
 
-// Error handler
+// Error handler - don't leak stack traces in production
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
   

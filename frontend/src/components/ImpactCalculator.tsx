@@ -162,7 +162,7 @@ function ImpactCalculator() {
 
       <button
         className="btn btn-primary"
-        onClick={calculateImpact}
+        onClick={handleCalculate}
         disabled={loading}
         style={{ width: '100%', padding: 'var(--spacing-md)' }}
       >

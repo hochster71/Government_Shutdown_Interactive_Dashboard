@@ -20,16 +20,16 @@ function SourceCitations() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchSources()
+    loadSources()
   }, [])
 
-  const fetchSources = async () => {
+  const loadSources = async () => {
     try {
       const data = await apiGet<{ sources: Source[] }>('/api/sources')
       setSources(data.sources || [])
       setLoading(false)
-    } catch (error) {
-      console.error('Error fetching sources:', error)
+    } catch (error: any) {
+      logger.error('Error fetching sources:', error)
       // Use fallback data
       setSources([
         {
