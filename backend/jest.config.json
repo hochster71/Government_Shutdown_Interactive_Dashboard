@@ -9,5 +9,6 @@
     "!**/tests/**",
     "!**/coverage/**"
   ],
-  "forceExit": true
+  "silent": false,
+  "verbose": true
 }

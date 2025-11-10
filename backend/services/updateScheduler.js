@@ -143,12 +143,18 @@ export function initUpdateScheduler(cache, logger, newsApiKey) {
   }, 'Update scheduler initialized successfully');
 
   // Perform initial update on startup (after a short delay to allow server to fully start)
-  setTimeout(() => {
-    logger.info('Performing initial data update on startup');
-    performScheduledUpdate().catch(err => {
-      logger.error({ error: err.message }, 'Initial update failed');
-    });
-  }, 5000); // 5 second delay
+  // Store timeout reference for cleanup
+  let initialUpdateTimeout = null;
+  
+  // Only schedule initial update in non-test environments
+  if (process.env.NODE_ENV !== 'test') {
+    initialUpdateTimeout = setTimeout(() => {
+      logger.info('Performing initial data update on startup');
+      performScheduledUpdate().catch(err => {
+        logger.error({ error: err.message }, 'Initial update failed');
+      });
+    }, 5000); // 5 second delay
+  }
 
   // Return task object for testing/management
   return {
@@ -156,6 +162,11 @@ export function initUpdateScheduler(cache, logger, newsApiKey) {
     performScheduledUpdate, // Expose for manual triggering if needed
     stop: () => {
       task.stop();
+      // Clear the initial update timeout if it exists
+      if (initialUpdateTimeout) {
+        clearTimeout(initialUpdateTimeout);
+        initialUpdateTimeout = null;
+      }
       logger.info('Update scheduler stopped');
     }
   };

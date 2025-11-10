@@ -181,18 +181,25 @@ async function fetchShutdownsWithRetry(retryCount = 0) {
 
     return shutdowns;
   } catch (error) {
-    console.error(`Error fetching Wikipedia data (attempt ${retryCount + 1}):`, error.message);
+    // Only log in non-test environments to reduce noise
+    if (process.env.NODE_ENV !== 'test') {
+      console.error(`Error fetching Wikipedia data (attempt ${retryCount + 1}):`, error.message);
+    }
     
     // Retry with exponential backoff
     if (retryCount < MAX_RETRIES) {
       const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
-      console.log(`Retrying in ${delay}ms...`);
+      if (process.env.NODE_ENV !== 'test') {
+        console.log(`Retrying in ${delay}ms...`);
+      }
       await sleep(delay);
       return fetchShutdownsWithRetry(retryCount + 1);
     }
     
     // Return sample data as fallback after all retries
-    console.log('All retries exhausted, returning sample data');
+    if (process.env.NODE_ENV !== 'test') {
+      console.log('All retries exhausted, returning sample data');
+    }
     return getSampleShutdownData();
   }
 }
