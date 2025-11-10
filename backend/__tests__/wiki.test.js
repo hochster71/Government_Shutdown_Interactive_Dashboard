@@ -1,4 +1,5 @@
 // backend/__tests__/wiki.test.js
+// Tests for the Wiki adapter with mocked fetch to prevent network calls
 import { jest } from '@jest/globals';
 
 // Mock global fetch to return HTML for wiki adapter to parse
