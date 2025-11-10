@@ -64,10 +64,22 @@ npm start
 npm test
 ```
 
-### Watch Mode
+### Watch Mode (runs tests on file changes)
 
 ```bash
 npm run test:watch
+```
+
+### Verbose Output
+
+```bash
+npm run test:verbose
+```
+
+### Coverage Report
+
+```bash
+npm run test:coverage
 ```
 
 ### Test Configuration
