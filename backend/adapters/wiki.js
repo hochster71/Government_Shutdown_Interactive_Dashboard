@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import axios from 'axios';
 
 /**
  * Wikipedia Adapter - Scrapes US Government shutdown data
@@ -115,17 +116,14 @@ function validateDate(dateStr) {
  */
 async function fetchShutdownsWithRetry(retryCount = 0) {
   try {
-    const response = await fetchWithTimeout(WIKI_URL, 10000, {
+    const response = await axios.get(WIKI_URL, {
       headers: {
         'User-Agent': 'Government-Shutdown-Dashboard/1.0 (Educational Purpose)'
-      }
+      },
+      timeout: 10000
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const html = await response.text();
+    const html = response.data;
     const $ = cheerio.load(html);
     const shutdowns = [];
 
