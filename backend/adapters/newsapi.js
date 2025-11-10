@@ -121,10 +121,14 @@ export async function fetchNews(apiKey, options = {}) {
   }
 
   try {
-    const query = options.query || DEFAULT_QUERY;
-    const pageSize = Math.min(options.pageSize || 20, MAX_ARTICLES);
-    const language = options.language || 'en';
-    const sortBy = options.sortBy || 'publishedAt';
+    // Sanitize and validate options
+    const query = (options.query || DEFAULT_QUERY).substring(0, 500); // Limit query length
+    const pageSizeInt = Number.parseInt(options.pageSize, 10);
+    const pageSize = Number.isNaN(pageSizeInt) ? 20 : Math.min(Math.max(pageSizeInt, 1), 100); // Clamp between 1-100
+    const language = (options.language || 'en').substring(0, 2); // Limit to 2 chars
+    const sortBy = ['publishedAt', 'relevancy', 'popularity'].includes(options.sortBy) 
+      ? options.sortBy 
+      : 'publishedAt';
 
     const url = new URL(`${NEWS_API_BASE_URL}/everything`);
     url.searchParams.append('q', query);
@@ -189,9 +193,12 @@ export async function fetchTopHeadlines(apiKey, options = {}) {
   }
 
   try {
-    const category = options.category || 'politics';
-    const country = options.country || 'us';
-    const pageSize = Math.min(options.pageSize || 10, MAX_ARTICLES);
+    // Sanitize and validate options
+    const validCategories = ['politics', 'business', 'general'];
+    const category = validCategories.includes(options.category) ? options.category : 'politics';
+    const country = (options.country || 'us').substring(0, 2).toLowerCase();
+    const pageSizeInt = Number.parseInt(options.pageSize, 10);
+    const pageSize = Number.isNaN(pageSizeInt) ? 10 : Math.min(Math.max(pageSizeInt, 1), 100);
 
     const url = new URL(`${NEWS_API_BASE_URL}/top-headlines`);
     url.searchParams.append('category', category);

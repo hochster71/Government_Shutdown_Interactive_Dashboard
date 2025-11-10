@@ -22,14 +22,12 @@
     "express-validator": "^7.0.1",
     "helmet": "^7.1.0",
     "node-cache": "^5.1.2",
-    "node-cron": "^3.0.3",
-    "pino": "^8.16.2",
-    "pino-http": "^9.0.0"
-  },
-  "devDependencies": {
-    "jest": "^29.7.0",
-    "pino-pretty": "^10.2.3",
-    "supertest": "^6.3.3"
+    "cheerio": "^1.0.0-rc.12",
+    "axios": "^1.12.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "helmet": "^8.0.0",
+    "express-validator": "^7.0.1"
   },
   "keywords": [
     "api",

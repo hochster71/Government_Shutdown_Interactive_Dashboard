@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { calculateImpact, sanitizeString } from '../utils/api'
-import { logger } from '../utils/logger'
+import API_ENDPOINTS from '../config/api'
 
 /**
  * Impact Calculator Component
@@ -72,19 +71,57 @@ function ImpactCalculator() {
       return
     }
 
+  const calculateImpact = async () => {
+    // Validate inputs
+    if (duration < 1 || duration > 365) {
+      setError('Duration must be between 1 and 365 days');
+      return;
+    }
+
+    if (affectedWorkers < 1000 || affectedWorkers > 5000000) {
+      setError('Affected workers must be between 1,000 and 5,000,000');
+      return;
+    }
+
     try {
       setLoading(true)
       setError(null)
 
-      logger.info('Calculating impact', { duration, affectedWorkers, year })
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-      const data = await calculateImpact(duration, affectedWorkers, year)
+      const response = await fetch(API_ENDPOINTS.IMPACT_CALC, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          duration,
+          affectedWorkers,
+          year,
+        }),
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to calculate impact')
+      }
+
+      const data = await response.json()
       setResult(data)
-      logger.info('Impact calculated successfully')
-    } catch (err: any) {
-      logger.error('Error calculating impact:', err)
-      setError(sanitizeString(err.message || 'Failed to calculate economic impact. Please try again.'))
-    } finally {
+      setLoading(false)
+    } catch (err) {
+      console.error('Error calculating impact:', err)
+      let errorMessage = 'Unknown error';
+      if (err instanceof Error) {
+        errorMessage = err.name === 'AbortError'
+          ? 'Request timed out. Please try again.'
+          : err.message;
+      }
+      setError(`Failed to calculate economic impact: ${errorMessage}`)
       setLoading(false)
     }
   }

@@ -5,8 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { body, validationResult } from 'express-validator';
 import NodeCache from 'node-cache';
 import dotenv from 'dotenv';
-import pino from 'pino';
-import pinoHttp from 'pino-http';
+import { body, query, validationResult } from 'express-validator';
 import { fetchShutdowns } from './adapters/wiki.js';
 import { fetchNews, fetchTopHeadlines } from './adapters/newsapi.js';
 import { initUpdateScheduler } from './services/updateScheduler.js';
@@ -47,14 +46,14 @@ if (isProduction && !process.env.ALLOWED_ORIGIN) {
 // Initialize cache (TTL: 1 hour = 3600 seconds)
 const cache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
 
-// Security Headers with Helmet
+// Security Middleware
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline needed for Vite in dev
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:', 'https:'],
+      styleSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
       connectSrc: ["'self'"],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
@@ -62,13 +61,15 @@ app.use(helmet({
       frameSrc: ["'none'"],
     },
   },
-  crossOriginEmbedderPolicy: false, // Allow embedding for development
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
 
-// HTTP Request Logging
-app.use(pinoHttp({ logger }));
-
-// CORS Configuration
+// Middleware
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, etc.)
@@ -94,11 +95,25 @@ app.use(cors({
   credentials: true
 }));
 
-// JSON body parser with size limit
-app.use(express.json({ limit: '100kb' }));
+app.use(express.json({ limit: '10kb' })); // Limit payload size to prevent DOS
 
-// Rate limiting: max 100 requests per 15 minutes with informative headers
-const limiter = rateLimit({
+// Validation error handler middleware
+const handleValidationErrors = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ 
+      error: 'Validation failed',
+      details: errors.array().map(err => ({
+        field: err.path || err.param,
+        message: err.msg
+      }))
+    });
+  }
+  next();
+};
+
+// General API rate limiting: max 100 requests per 15 minutes
+const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   message: { error: 'Too many requests from this IP, please try again later.' },
@@ -114,7 +129,16 @@ const limiter = rateLimit({
   }
 });
 
-app.use('/api/', limiter);
+// Stricter rate limiting for POST endpoints: max 20 requests per 15 minutes
+const postLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: 'Too many calculation requests. Please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/', generalLimiter);
 
 // Store scheduler instance for management
 let updateScheduler = null;
@@ -204,20 +228,11 @@ app.get('/api/shutdowns', async (req, res) => {
  * Query params: query, pageSize, sortBy
  */
 app.get('/api/news', [
-  // Input validation
-  body('query').optional().isString().trim().isLength({ max: 500 }),
-  body('pageSize').optional().isInt({ min: 1, max: 100 }),
-  body('sortBy').optional().isIn(['publishedAt', 'relevancy', 'popularity'])
+  query('query').optional().isString().trim().notEmpty().isLength({ max: 500 }),
+  query('pageSize').optional().isInt({ min: 1, max: 100 }).toInt(),
+  query('sortBy').optional().isIn(['publishedAt', 'relevancy', 'popularity']),
+  handleValidationErrors
 ], async (req, res) => {
-  // Check validation results
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ 
-      error: 'Validation error', 
-      details: errors.array() 
-    });
-  }
-
   try {
     const apiKey = process.env.NEWSAPI_KEY;
     const cacheKey = `news_${req.query.query || 'default'}`;
@@ -263,7 +278,12 @@ app.get('/api/news', [
  * GET /api/news/headlines
  * Fetches top political headlines
  */
-app.get('/api/news/headlines', async (req, res) => {
+app.get('/api/news/headlines', [
+  query('category').optional().isIn(['politics', 'business', 'general']),
+  query('country').optional().isLength({ min: 2, max: 2 }),
+  query('pageSize').optional().isInt({ min: 1, max: 100 }).toInt(),
+  handleValidationErrors
+], async (req, res) => {
   try {
     const apiKey = process.env.NEWSAPI_KEY;
     const cacheKey = 'headlines';
@@ -327,21 +347,12 @@ app.get('/api/govinfo/:type', (req, res) => {
  * Calculate economic impact of a government shutdown
  * Body: { duration: number (days), affectedWorkers: number, year: number }
  */
-app.post('/api/impact/calc', [
-  // Input validation
-  body('duration').isInt({ min: 1, max: 365 }).withMessage('Duration must be between 1 and 365 days'),
-  body('affectedWorkers').optional().isInt({ min: 1000, max: 3000000 }).withMessage('Affected workers must be between 1,000 and 3,000,000'),
-  body('year').optional().isInt({ min: 1970, max: 2100 }).withMessage('Year must be between 1970 and 2100')
+app.post('/api/impact/calc', postLimiter, [
+  body('duration').isInt({ min: 1, max: 365 }).toInt(),
+  body('affectedWorkers').optional().isInt({ min: 1, max: 5000000 }).toInt(),
+  body('year').optional().isInt({ min: 1900, max: 2100 }).toInt(),
+  handleValidationErrors
 ], (req, res) => {
-  // Check validation results
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ 
-      error: 'Validation error', 
-      details: errors.array() 
-    });
-  }
-
   try {
     const { duration, affectedWorkers, year } = req.body;
 
