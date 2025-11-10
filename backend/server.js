@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import buildHelmetOptions from './security/helmetOptions.js';
 import rateLimit from 'express-rate-limit';
 import { body, validationResult } from 'express-validator';
 import NodeCache from 'node-cache';
@@ -35,35 +36,20 @@ const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const isProduction = NODE_ENV === 'production';
 
-// CORS Configuration
-const ALLOWED_ORIGIN = isProduction 
-  ? process.env.ALLOWED_ORIGIN 
-  : (process.env.ALLOWED_ORIGIN || 'http://localhost:5173');
+// CORS Configuration: support comma-separated ALLOWED_ORIGINS for multiple allowed origins
+const rawAllowed = process.env.ALLOWED_ORIGINS || process.env.ALLOWED_ORIGIN || '';
+const ALLOWED_ORIGINS = rawAllowed.split(',').map(s => s.trim()).filter(Boolean);
 
-if (isProduction && !process.env.ALLOWED_ORIGIN) {
-  logger.warn('⚠️  ALLOWED_ORIGIN not set in production. CORS will be restrictive.');
+if (isProduction && ALLOWED_ORIGINS.length === 0) {
+  logger.warn('⚠️  ALLOWED_ORIGINS not set in production. CORS will be restrictive.');
 }
 
 // Initialize cache (TTL: 1 hour = 3600 seconds)
 const cache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
 
 // Security Headers with Helmet
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline needed for Vite in dev
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-    },
-  },
-  crossOriginEmbedderPolicy: false, // Allow embedding for development
-}));
+// Use the helmet options builder which adapts CSP for production
+app.use(helmet(buildHelmetOptions(isProduction, ALLOWED_ORIGINS)));
 
 // HTTP Request Logging
 app.use(pinoHttp({ logger }));
@@ -71,25 +57,24 @@ app.use(pinoHttp({ logger }));
 // CORS Configuration
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, etc.)
+    // Allow requests with no origin (mobile apps, curl, server-to-server)
     if (!origin) return callback(null, true);
-    
+
     if (isProduction) {
-      // In production, only allow configured origin
-      if (origin === ALLOWED_ORIGIN) {
-        callback(null, true);
-      } else {
-        logger.warn({ origin, allowed: ALLOWED_ORIGIN }, 'CORS origin rejected');
-        callback(new Error('Not allowed by CORS'));
+      // Allow if origin matches one of the configured allowed origins
+      if (ALLOWED_ORIGINS.includes(origin)) {
+        return callback(null, true);
       }
-    } else {
-      // In development, allow localhost origins
-      if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
+      logger.warn({ origin, allowed: ALLOWED_ORIGINS }, 'CORS origin rejected');
+      return callback(new Error('Not allowed by CORS'));
     }
+
+    // dev: allow localhost/127 prefixes
+    if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true
 }));
