@@ -44,8 +44,16 @@ api.interceptors.response.use(
       customError.message = 'Network error. Please check your connection.';
     } else if (error.response) {
       // Server responded with error status
-      const responseData = error.response.data as any;
-      customError.message = responseData?.message || responseData?.error || customError.message;
+      const responseData = error.response.data as unknown;
+      if (responseData && typeof responseData === 'object') {
+        const rd = responseData as Record<string, unknown>;
+        const msg = rd['message'] ?? rd['error'];
+        if (typeof msg === 'string') {
+          customError.message = msg;
+        }
+      } else if (typeof responseData === 'string') {
+        customError.message = responseData;
+      }
     } else if (error.request) {
       customError.message = 'No response from server. Please try again later.';
     }
