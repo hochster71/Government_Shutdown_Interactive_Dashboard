@@ -1,0 +1,23 @@
+name: Notify PR Merged
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  notify:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment on merged PR
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const body = `PR #${pr.number} (${pr.head.ref}) was merged into ${pr.base.ref} by ${pr.merged_by ? pr.merged_by.login : 'unknown'}.`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body,
+            });
