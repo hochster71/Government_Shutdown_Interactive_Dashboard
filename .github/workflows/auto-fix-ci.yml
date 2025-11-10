@@ -1,0 +1,54 @@
+name: Auto-fix CI failures (guarded)
+
+on:
+  workflow_run:
+    types: [completed]
+
+jobs:
+  auto-fix:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine PR from head SHA
+        id: find_pr
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const sha = context.payload.workflow_run.head_sha;
+            const resp = await github.request('GET /repos/{owner}/{repo}/commits/{ref}/pulls', {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: sha,
+            });
+            const prs = resp.data;
+            if (!prs || prs.length === 0) {
+              core.setOutput('pr', '');
+            } else {
+              core.setOutput('pr', String(prs[0].number));
+            }
+
+      - name: Run auto-fix (dry-run unless secrets.ALLOW_AUTO_FIX=true)
+        env:
+          ALLOW_AUTO_FIX: ${{ secrets.ALLOW_AUTO_FIX }}
+        run: |
+          PR=${{ steps.find_pr.outputs.pr }}
+          echo "Found PR: $PR"
+          if [ -z "$PR" ]; then
+            echo "No PR associated with this workflow run. Exiting."
+            exit 0
+          fi
+          # Install node & python
+          sudo apt-get update && sudo apt-get install -y nodejs npm python3 python3-pip || true
+          node --version || true
+          python3 --version || true
+          # Run fixer in dry-run by default
+          if [ "${ALLOW_AUTO_FIX:-}" = "true" ]; then
+            echo "ALLOW_AUTO_FIX=true -> running in LIVE mode"
+            python3 scripts/auto_fix_ci.py --pr-number "$PR"
+          else
+            echo "ALLOW_AUTO_FIX not enabled -> running dry-run"
+            python3 scripts/auto_fix_ci.py --pr-number "$PR" --dry-run
+          fi
