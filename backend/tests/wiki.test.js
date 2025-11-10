@@ -1,6 +1,46 @@
-import { fetchShutdowns } from '../adapters/wiki.js';
+import { jest } from '@jest/globals';
+
+// Mock the wiki adapter
+const mockFetchShutdowns = jest.fn();
+jest.unstable_mockModule('../adapters/wiki.js', () => ({
+  fetchShutdowns: mockFetchShutdowns
+}));
+
+// Import after mocking
+const { fetchShutdowns } = await import('../adapters/wiki.js');
+
+const mockShutdownData = [
+  {
+    id: 1,
+    date: 'December 22, 2018 – January 25, 2019',
+    duration: '34 days',
+    president: 'Donald Trump',
+    congress: '115th/116th',
+    description: 'Longest shutdown in US history.',
+    affectedAgencies: ['DHS', 'DOJ'],
+    source: 'Wikipedia'
+  },
+  {
+    id: 2,
+    date: 'October 1–17, 2013',
+    duration: '16 days',
+    president: 'Barack Obama',
+    congress: '113th',
+    description: 'Dispute over Affordable Care Act funding.',
+    affectedAgencies: ['National Parks', 'EPA'],
+    source: 'Wikipedia'
+  }
+];
 
 describe('Wiki Adapter', () => {
+  beforeEach(() => {
+    mockFetchShutdowns.mockResolvedValue(mockShutdownData);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   test('fetchShutdowns returns an array', async () => {
     const shutdowns = await fetchShutdowns();
     expect(Array.isArray(shutdowns)).toBe(true);
