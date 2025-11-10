@@ -1,0 +1,60 @@
+name: "Weekly NPM Audit"
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # every Sunday at 00:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  npm-audit:
+    name: Run npm audit across workspaces
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install workspace dependencies
+        run: |
+          npm ci || npm install
+          npm run install:all || true
+
+      - name: Run audit (root)
+        run: |
+          npm audit --json > audit-root.json || true
+          node -e "const fs=require('fs'); const r=JSON.parse(fs.readFileSync('audit-root.json')); const total=r.metadata && Object.values(r.metadata.vulnerabilities).reduce((a,b)=>a+b,0)||0; console.log('root vulnerabilities:', total); if(total>0){ console.log(JSON.stringify(r, null, 2)); process.exit(1) }"
+
+      - name: Run audit (backend)
+        run: |
+          (cd backend && npm audit --json > ../audit-backend.json) || true
+          node -e "const fs=require('fs'); const r=JSON.parse(fs.readFileSync('audit-backend.json')); const total=r.metadata && Object.values(r.metadata.vulnerabilities).reduce((a,b)=>a+b,0)||0; console.log('backend vulnerabilities:', total); if(total>0){ console.log(JSON.stringify(r, null, 2)); process.exit(1) }"
+
+      - name: Run audit (frontend)
+        run: |
+          (cd frontend && npm audit --json > ../audit-frontend.json) || true
+          node -e "const fs=require('fs'); const r=JSON.parse(fs.readFileSync('audit-frontend.json')); const total=r.metadata && Object.values(r.metadata.vulnerabilities).reduce((a,b)=>a+b,0)||0; console.log('frontend vulnerabilities:', total); if(total>0){ console.log(JSON.stringify(r, null, 2)); process.exit(1) }"
+
+      - name: Upload audit reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-reports
+          path: |
+            audit-root.json
+            audit-backend.json
+            audit-frontend.json
+
+      - name: Notify on audit failure (optional)
+        if: failure() && secrets.AUDIT_WEBHOOK_URL
+        env:
+          WEBHOOK_URL: ${{ secrets.AUDIT_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.run_url }}
+        run: |
+          echo "Sending audit failure notification to webhook"
+          body="{\"text\": \"[${REPO}] npm audit detected vulnerabilities. See CI run: ${RUN_URL}\"}"
+          curl -s -X POST -H 'Content-Type: application/json' -d "$body" "$WEBHOOK_URL" || echo 'Webhook notify failed'
