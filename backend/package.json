@@ -8,7 +8,7 @@
     "dev": "node --watch server.js",
     "start": "node server.js",
     "build": "echo 'No build step required for backend'",
-    "test": "NODE_OPTIONS='--experimental-vm-modules' npx jest"
+    "test": "NODE_OPTIONS='--experimental-vm-modules' npx jest --config=jest.config.json"
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",
@@ -28,10 +28,6 @@
   "devDependencies": {
     "jest": "^29.7.0",
     "pino-pretty": "^10.2.3",
-    "supertest": "^6.3.3"
-  },
-  "devDependencies": {
-    "jest": "^29.7.0",
     "supertest": "^6.3.3"
   },
   "keywords": [
