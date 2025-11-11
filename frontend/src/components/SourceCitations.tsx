@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchSources } from '../utils/api'
+import { apiGet } from '../utils/api'
 import { logger } from '../utils/logger'
 
 /**
@@ -26,11 +26,11 @@ function SourceCitations() {
 
   const loadSources = async () => {
     try {
-      const data = await fetchSources()
+      const data = await apiGet<{ sources: Source[] }>('/api/sources')
       setSources(data.sources || [])
       setLoading(false)
-    } catch (error: any) {
-      logger.error('Error fetching sources:', error)
+    } catch (error: unknown) {
+      logger.error('Error fetching sources:', String(error))
       // Use fallback data
       setSources([
         {
@@ -47,7 +47,39 @@ function SourceCitations() {
           description: 'Real-time news articles about government shutdowns',
           license: 'Proprietary',
           type: 'news',
-          enabled: false
+          enabled: !!process.env.NEWSAPI_KEY && process.env.NEWSAPI_KEY !== 'your_newsapi_key_here'
+        },
+        {
+          name: 'WhiteHouse.gov',
+          url: 'https://www.whitehouse.gov/',
+          description: 'Official presidential statements and press releases',
+          license: 'Public Domain',
+          type: 'government',
+          enabled: true
+        },
+        {
+          name: 'Congress.gov',
+          url: 'https://www.congress.gov/',
+          description: 'Legislative text, bill status, and appropriations information',
+          license: 'Public Domain',
+          type: 'government',
+          enabled: true
+        },
+        {
+          name: 'CBO',
+          url: 'https://www.cbo.gov/',
+          description: 'Budget and economic analysis related to shutdown impacts',
+          license: 'Public Domain',
+          type: 'government',
+          enabled: true
+        },
+        {
+          name: 'OMB',
+          url: 'https://www.whitehouse.gov/omb/',
+          description: 'Guidance for federal agencies about appropriations and contingencies',
+          license: 'Public Domain',
+          type: 'government',
+          enabled: true
         }
       ])
       setLoading(false)

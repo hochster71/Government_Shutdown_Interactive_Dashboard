@@ -1,8 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
-import { body, validationResult } from 'express-validator';
+import { body, query, validationResult } from 'express-validator';
 import NodeCache from 'node-cache';
 import dotenv from 'dotenv';
 import pino from 'pino';
@@ -10,6 +12,9 @@ import pinoHttp from 'pino-http';
 import { fetchShutdowns } from './adapters/wiki.js';
 import { fetchNews, fetchTopHeadlines } from './adapters/newsapi.js';
 import { initUpdateScheduler } from './services/updateScheduler.js';
+import fs from 'fs/promises';
+import path from 'path';
+import * as cheerio from 'cheerio';
 
 // Load environment variables
 dotenv.config({ path: '../.env' });
@@ -33,26 +38,17 @@ const logger = pino({
 const app = express();
 const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
-const isProduction = NODE_ENV === 'production';
-
-// CORS Configuration
-const ALLOWED_ORIGIN = isProduction 
-  ? process.env.ALLOWED_ORIGIN 
-  : (process.env.ALLOWED_ORIGIN || 'http://localhost:5173');
-
-if (isProduction && !process.env.ALLOWED_ORIGIN) {
-  logger.warn('⚠️  ALLOWED_ORIGIN not set in production. CORS will be restrictive.');
-}
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
 
 // Initialize cache (TTL: 1 hour = 3600 seconds)
 const cache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
 
-// Security Headers with Helmet
+// Security Middleware - Helmet with enhanced configuration
 app.use(helmet({
-  contentSecurityPolicy: {
+  contentSecurityPolicy: NODE_ENV === 'production' ? {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline needed for Vite in dev
+      scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https:'],
       connectSrc: ["'self'"],
@@ -60,42 +56,74 @@ app.use(helmet({
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
       frameSrc: ["'none'"],
-    },
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"],
+      upgradeInsecureRequests: [],
+    }
+  } : false,
+  crossOriginEmbedderPolicy: NODE_ENV === 'production' ? true : false,
+  crossOriginOpenerPolicy: { policy: "same-origin" },
+  crossOriginResourcePolicy: { policy: "same-origin" },
+  dnsPrefetchControl: { allow: false },
+  frameguard: { action: 'deny' },
+  hidePoweredBy: true,
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
   },
-  crossOriginEmbedderPolicy: false, // Allow embedding for development
+  ieNoOpen: true,
+  noSniff: true,
+  originAgentCluster: true,
+  permittedCrossDomainPolicies: { permittedPolicies: "none" },
+  referrerPolicy: { policy: "no-referrer" },
+  xssFilter: true
 }));
 
-// HTTP Request Logging
-app.use(pinoHttp({ logger }));
+// Compression middleware for performance
+app.use(compression());
 
-// CORS Configuration
+// Request logging (only in development or if LOG_REQUESTS=true)
+if (NODE_ENV === 'development' || process.env.LOG_REQUESTS === 'true') {
+  app.use(morgan('combined'));
+}
+
+// CORS Middleware - Tightened for production
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, etc.)
+    // Allow requests with no origin (like mobile apps or curl)
     if (!origin) return callback(null, true);
     
-    if (isProduction) {
-      // In production, only allow configured origin
+    // In production, only allow configured origin
+    if (NODE_ENV === 'production') {
       if (origin === ALLOWED_ORIGIN) {
         callback(null, true);
       } else {
-        logger.warn({ origin, allowed: ALLOWED_ORIGIN }, 'CORS origin rejected');
         callback(new Error('Not allowed by CORS'));
       }
     } else {
-      // In development, allow localhost origins
-      if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+      // In development, allow configured origin
+      if (origin === ALLOWED_ORIGIN || origin === 'http://localhost:5173') {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
       }
     }
   },
-  credentials: true
+  credentials: true,
+  maxAge: 600 // Cache preflight request for 10 minutes
 }));
 
-// JSON body parser with size limit
-app.use(express.json({ limit: '100kb' }));
+app.use(express.json({ limit: '100kb' })); // Limit body size
+app.use(express.urlencoded({ extended: true, limit: '100kb' })); // URL-encoded body parsing with limit
+
+// Security middleware to remove sensitive headers from responses
+app.use((req, res, next) => {
+  res.removeHeader('X-Powered-By');
+  res.removeHeader('Server');
+  next();
+});
 
 // Rate limiting: max 100 requests per 15 minutes with informative headers
 const limiter = rateLimit({
@@ -104,20 +132,20 @@ const limiter = rateLimit({
   message: { error: 'Too many requests from this IP, please try again later.' },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false,
-  handler: (req, res) => {
-    logger.warn({ ip: req.ip }, 'Rate limit exceeded');
-    res.status(429).json({
-      error: 'Too many requests',
-      message: 'You have exceeded the rate limit. Please try again later.',
-      retryAfter: res.getHeader('RateLimit-Reset')
-    });
-  }
+  skipSuccessfulRequests: false,
+  skipFailedRequests: false,
 });
 
 app.use('/api/', limiter);
 
-// Store scheduler instance for management
-let updateScheduler = null;
+// Stricter rate limiting for POST endpoints
+const postLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: 'Too many POST requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -201,24 +229,23 @@ app.get('/api/shutdowns', async (req, res) => {
 /**
  * GET /api/news
  * Proxies requests to NewsAPI for government shutdown news
- * Query params: query, pageSize, sortBy
+ * Query params: query, pageSize, sortBy (validated)
  */
 app.get('/api/news', [
-  // Input validation
-  body('query').optional().isString().trim().isLength({ max: 500 }),
-  body('pageSize').optional().isInt({ min: 1, max: 100 }),
-  body('sortBy').optional().isIn(['publishedAt', 'relevancy', 'popularity'])
+  query('query').optional().isString().trim().isLength({ max: 500 }).escape(),
+  query('pageSize').optional().isInt({ min: 1, max: 100 }).toInt(),
+  query('sortBy').optional().isIn(['publishedAt', 'relevancy', 'popularity'])
 ], async (req, res) => {
-  // Check validation results
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ 
-      error: 'Validation error', 
-      details: errors.array() 
-    });
-  }
-
   try {
+    // Validate input
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        error: 'Invalid input parameters',
+        details: errors.array() 
+      });
+    }
+
     const apiKey = process.env.NEWSAPI_KEY;
     const cacheKey = `news_${req.query.query || 'default'}`;
     
@@ -241,6 +268,40 @@ app.get('/api/news', [
 
     const newsData = await fetchNews(apiKey, options);
     
+    // If NewsAPI returned no articles (key absent or empty), attempt RSS fallback
+    if (!newsData || !Array.isArray(newsData.articles) || newsData.articles.length === 0) {
+      try {
+        // Find latest RSS file in data/
+        const dataDir = path.join(process.cwd(), 'data');
+        const files = await fs.readdir(dataDir).catch(() => []);
+        const rssFiles = files.filter(f => f.startsWith('latest_rss_')).sort();
+        if (rssFiles.length > 0) {
+          const latest = rssFiles[rssFiles.length - 1];
+          const raw = await fs.readFile(path.join(dataDir, latest), 'utf8');
+          const parsed = JSON.parse(raw);
+          // Flatten articles and tag source
+          const articles = [];
+          for (const src of parsed.sources || []) {
+            for (const it of src.items || []) {
+              articles.push({
+                title: it.title,
+                description: it.description,
+                url: it.url,
+                source: src.source,
+                publishedAt: it.publishedAt
+              });
+            }
+          }
+
+          // Cache and return RSS articles
+          cache.set(cacheKey, { articles, totalResults: articles.length }, 1800);
+          return res.json({ articles, totalResults: articles.length, cached: false, timestamp: new Date().toISOString() });
+        }
+      } catch (err) {
+        console.warn('RSS fallback failed:', err.message || err);
+      }
+    }
+
     // Cache the result (30 minutes = 1800 seconds)
     cache.set(cacheKey, newsData, 1800);
 
@@ -250,10 +311,13 @@ app.get('/api/news', [
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    logger.error({ error: error.message, stack: error.stack }, 'Error in /api/news');
+    console.error('Error in /api/news:', error);
+    const message = NODE_ENV === 'production' 
+      ? 'Failed to fetch news'
+      : error.message;
     res.status(500).json({
       error: 'Failed to fetch news',
-      message: isProduction ? 'An error occurred while fetching news' : error.message,
+      message,
       articles: []
     });
   }
@@ -263,10 +327,23 @@ app.get('/api/news', [
  * GET /api/news/headlines
  * Fetches top political headlines
  */
-app.get('/api/news/headlines', async (req, res) => {
+app.get('/api/news/headlines', [
+  query('category').optional().isIn(['business', 'entertainment', 'general', 'health', 'science', 'sports', 'technology', 'politics']),
+  query('country').optional().isAlpha().isLength({ min: 2, max: 2 }),
+  query('pageSize').optional().isInt({ min: 1, max: 100 }).toInt()
+], async (req, res) => {
   try {
+    // Validate input
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        error: 'Invalid input parameters',
+        details: errors.array() 
+      });
+    }
+
     const apiKey = process.env.NEWSAPI_KEY;
-    const cacheKey = 'headlines';
+    const cacheKey = `headlines_${req.query.category || 'politics'}_${req.query.country || 'us'}`;
     
     // Check cache
     const cachedData = cache.get(cacheKey);
@@ -306,12 +383,130 @@ app.get('/api/news/headlines', async (req, res) => {
 });
 
 /**
+ * GET /api/official
+ * Returns structured official notices parsed from saved snapshots in /data
+ * If snapshots are not available, returns an empty array for each source.
+ */
+app.get('/api/official', async (req, res) => {
+  try {
+    const dataDir = path.join(process.cwd(), 'data');
+
+    const sourcesToLoad = [
+      { name: 'WhiteHouse', prefix: 'whitehouse_search_', domain: 'whitehouse.gov' },
+      { name: 'Congress', prefix: 'congress_search_', domain: 'congress.gov' },
+      { name: 'GovInfo', prefix: 'govinfo_search_', domain: 'govinfo.gov' },
+      { name: 'CBO', prefix: 'cbo_search_', domain: 'cbo.gov' }
+    ];
+
+    const files = await fs.readdir(dataDir).catch(() => []);
+
+    const results = [];
+
+    for (const src of sourcesToLoad) {
+      // Find latest file matching prefix
+      const matched = files.filter(f => f.startsWith(src.prefix)).sort();
+      if (matched.length === 0) {
+        results.push({ source: src.name, items: [], file: null });
+        continue;
+      }
+
+      const latest = matched[matched.length - 1];
+      const raw = await fs.readFile(path.join(dataDir, latest), 'utf8').catch(() => '');
+      const $ = cheerio.load(raw || '');
+
+      const items = [];
+
+      // Generic extraction: look for links that contain the source domain and capture context
+      $('a').each((i, el) => {
+        try {
+          const href = $(el).attr('href') || '';
+          const text = $(el).text().trim();
+          if (!href || !text) return;
+
+          // Only consider links that reference the expected domain or are absolute paths
+          if (href.includes(src.domain) || href.startsWith('/')) {
+            // Build absolute URL when necessary
+            let url = href;
+            if (href.startsWith('/')) url = `https://${src.domain}${href}`;
+            if (!url.startsWith('http')) url = `https://${src.domain}/${href}`;
+
+            // Try to extract a nearby excerpt: nearest article or paragraph
+            const article = $(el).closest('article');
+            let excerpt = '';
+            if (article && article.length) {
+              excerpt = article.text().replace(/\s+/g, ' ').trim();
+            } else {
+              const parentText = $(el).parent().text() || '';
+              excerpt = parentText.replace(/\s+/g, ' ').trim();
+            }
+
+            items.push({ title: text, url, excerpt: excerpt.substring(0, 500) });
+          }
+        } catch (e) {
+          // ignore parsing errors for individual nodes
+        }
+      });
+
+      // Deduplicate by URL and limit
+      const deduped = [];
+      const seen = new Set();
+      for (const it of items) {
+        if (!seen.has(it.url)) {
+          seen.add(it.url);
+          deduped.push(it);
+        }
+        if (deduped.length >= 25) break;
+      }
+
+      results.push({ source: src.name, file: latest, items: deduped });
+    }
+
+    res.json({ results, timestamp: new Date().toISOString() });
+  } catch (error) {
+    logger.error({ error: error.message, stack: error.stack }, 'Error in /api/official');
+    res.status(500).json({ error: 'Failed to fetch official notices', message: error.message, results: [] });
+  }
+});
+
+/**
+ * GET /api/official/canonical
+ * Returns the latest canonical official feed (normalized)
+ */
+app.get('/api/official/canonical', async (req, res) => {
+  try {
+    const dataDir = path.join(process.cwd(), 'data');
+    const files = await fs.readdir(dataDir).catch(() => []);
+    const canonicalFiles = files.filter(f => f.startsWith('official_canonical_')).sort();
+    if (canonicalFiles.length === 0) {
+      return res.json({ items: [], timestamp: new Date().toISOString() });
+    }
+    const latest = canonicalFiles[canonicalFiles.length - 1];
+    const raw = await fs.readFile(path.join(dataDir, latest), 'utf8');
+    const parsed = JSON.parse(raw);
+    res.json({ items: parsed.items || [], parsed_at: parsed.parsed_at, file: latest, timestamp: new Date().toISOString() });
+  } catch (err) {
+    logger.error({ error: err.message, stack: err.stack }, 'Error in /api/official/canonical');
+    res.status(500).json({ error: 'Failed to load canonical feed', message: err.message, items: [] });
+  }
+});
+
+/**
  * GET /api/govinfo/:type
  * Proxy endpoint for GovInfo.gov
  * This is a placeholder - actual implementation would require GovInfo API integration
  */
-app.get('/api/govinfo/:type', (req, res) => {
+app.get('/api/govinfo/:type', [
+  query('type').optional().isAlphanumeric().isLength({ max: 50 })
+], (req, res) => {
   const { type } = req.params;
+  
+  // Validate type parameter
+  if (!type || !/^[a-zA-Z0-9-_]+$/.test(type) || type.length > 50) {
+    return res.status(400).json({
+      error: 'Invalid type parameter',
+      message: 'Type must be alphanumeric and less than 50 characters'
+    });
+  }
   
   // Placeholder response
   res.json({
@@ -327,22 +522,21 @@ app.get('/api/govinfo/:type', (req, res) => {
  * Calculate economic impact of a government shutdown
  * Body: { duration: number (days), affectedWorkers: number, year: number }
  */
-app.post('/api/impact/calc', [
-  // Input validation
+app.post('/api/impact/calc', postLimiter, [
   body('duration').isInt({ min: 1, max: 365 }).withMessage('Duration must be between 1 and 365 days'),
   body('affectedWorkers').optional().isInt({ min: 1000, max: 3000000 }).withMessage('Affected workers must be between 1,000 and 3,000,000'),
   body('year').optional().isInt({ min: 1970, max: 2100 }).withMessage('Year must be between 1970 and 2100')
 ], (req, res) => {
-  // Check validation results
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ 
-      error: 'Validation error', 
-      details: errors.array() 
-    });
-  }
-
   try {
+    // Validate input
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        error: 'Invalid input parameters',
+        details: errors.array() 
+      });
+    }
+
     const { duration, affectedWorkers, year } = req.body;
 
     // Base calculations (simplified model)
@@ -387,10 +581,87 @@ app.post('/api/impact/calc', [
 
     res.json(result);
   } catch (error) {
-    logger.error({ error: error.message, stack: error.stack }, 'Error in /api/impact/calc');
+    // Add extended authoritative sources for accurate, traceable reporting
+    const extendedSources = [
+      {
+        name: 'WhiteHouse.gov',
+        url: 'https://www.whitehouse.gov/',
+        description: 'Presidential statements, press releases, and official guidance',
+        license: 'Public Domain',
+        type: 'government'
+      },
+      {
+        name: 'Congress.gov',
+        url: 'https://www.congress.gov/',
+        description: 'Legislative text, bill status, committee reports (appropriations and continuing resolutions)',
+        license: 'Public Domain',
+        type: 'government'
+      },
+      {
+        name: 'Congressional Budget Office (CBO)',
+        url: 'https://www.cbo.gov/',
+        description: 'Budgetary and economic analysis relevant to shutdown impacts',
+        license: 'Public Domain',
+        type: 'government'
+      },
+      {
+        name: 'Office of Management and Budget (OMB)',
+        url: 'https://www.whitehouse.gov/omb/',
+        description: 'Guidance for federal agencies during appropriations gaps and contingency operations',
+        license: 'Public Domain',
+        type: 'government'
+      },
+      {
+        name: 'U.S. Department of Homeland Security (DHS)',
+        url: 'https://www.dhs.gov/',
+        description: 'Operational notices and guidance for DHS components',
+        license: 'Public Domain',
+        type: 'government'
+      },
+      {
+        name: 'U.S. Treasury',
+        url: 'https://home.treasury.gov/',
+        description: 'Financial guidance, payments, and debt-related notices',
+        license: 'Public Domain',
+        type: 'government'
+      },
+      {
+        name: 'Social Security Administration (SSA)',
+        url: 'https://www.ssa.gov/',
+        description: 'Service impact notices and guidance for beneficiaries',
+        license: 'Public Domain',
+        type: 'government'
+      },
+      {
+        name: 'U.S. Postal Service (USPS)',
+        url: 'https://about.usps.com/',
+        description: 'Operational guidance and notices affecting postal services',
+        license: 'Public Domain',
+        type: 'government'
+      },
+      {
+        name: 'National Park Service (NPS)',
+        url: 'https://www.nps.gov/',
+        description: 'Operational notices and park closure information',
+        license: 'Public Domain',
+        type: 'government'
+      }
+    ];
+
+    // Merge unique sources into the returned list (avoid duplicates)
+    const merged = [...sources];
+    extendedSources.forEach(ext => {
+      if (!merged.some(s => s.url === ext.url)) merged.push(ext);
+    });
+
+    res.json({ sources: merged, timestamp: new Date().toISOString() });
+    console.error('Error in /api/impact/calc:', error);
+    const message = NODE_ENV === 'production' 
+      ? 'Failed to calculate impact'
+      : error.message;
     res.status(500).json({
       error: 'Failed to calculate impact',
-      message: isProduction ? 'An error occurred during calculation' : error.message
+      message
     });
   }
 });
@@ -421,53 +692,27 @@ app.use((req, res) => {
 
 // Error handler - don't leak stack traces in production
 app.use((err, req, res, next) => {
-  logger.error({ error: err.message, stack: err.stack }, 'Server error');
+  console.error('Server error:', err);
+  
+  // Don't expose stack traces in production
+  const message = NODE_ENV === 'production' 
+    ? 'An error occurred while processing your request'
+    : err.message;
+  
   res.status(err.status || 500).json({
     error: 'Internal Server Error',
-    message: isProduction ? 'An unexpected error occurred' : err.message
+    message
   });
 });
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM signal received: closing HTTP server');
-  if (updateScheduler) {
-    updateScheduler.stop();
-  }
-  server.close(() => {
-    logger.info('HTTP server closed');
-    process.exit(0);
-  });
-});
-
-process.on('SIGINT', () => {
-  logger.info('SIGINT signal received: closing HTTP server');
-  if (updateScheduler) {
-    updateScheduler.stop();
-  }
-  server.close(() => {
-    logger.info('HTTP server closed');
-    process.exit(0);
-  });
-});
-
-// Only start the server if this file is run directly (not imported for testing)
-let server;
+// Start server
 if (process.env.NODE_ENV !== 'test') {
-  server = app.listen(PORT, () => {
-    logger.info({
-      port: PORT,
-      env: NODE_ENV,
-      corsOrigin: ALLOWED_ORIGIN,
-      newsApiConfigured: !!process.env.NEWSAPI_KEY
-    }, 'Government Shutdown Dashboard API Server started');
-    
+  app.listen(PORT, () => {
     console.log(`✅ Government Shutdown Dashboard API Server`);
     console.log(`🚀 Running on http://localhost:${PORT}`);
     console.log(`📊 CORS enabled for: ${ALLOWED_ORIGIN}`);
+    console.log(`🔒 Environment: ${NODE_ENV}`);
     console.log(`🔑 NewsAPI: ${process.env.NEWSAPI_KEY ? 'Configured ✓' : 'Not configured (optional)'}`);
-    console.log(`🔒 Security: Helmet enabled with CSP`);
-    console.log(`📝 Logging: ${logLevel} level`);
     console.log(`\n📚 Available endpoints:`);
     console.log(`   GET  /health`);
     console.log(`   GET  /api/sources`);
@@ -476,17 +721,7 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`   GET  /api/news/headlines`);
     console.log(`   GET  /api/govinfo/:type`);
     console.log(`   POST /api/impact/calc`);
-    
-    // Initialize automated update scheduler after server starts
-    try {
-      updateScheduler = initUpdateScheduler(cache, logger, process.env.NEWSAPI_KEY);
-      console.log(`\n⏰ Automated updates: Every 6 hours (ET)`);
-    } catch (error) {
-      logger.error({ error: error.message }, 'Failed to initialize update scheduler');
-      console.error(`⚠️  Warning: Update scheduler failed to initialize`);
-    }
   });
 }
 
 export default app;
-export { server, updateScheduler };

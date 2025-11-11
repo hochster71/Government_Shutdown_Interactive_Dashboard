@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
+import { apiGet } from '../utils/api'
 import Timeline from './Timeline'
 import SankeyDiagram from './SankeyDiagram'
 import ImpactCalculator from './ImpactCalculator'
 import SourceCitations from './SourceCitations'
-import { fetchShutdowns, fetchNews, sanitizeString } from '../utils/api'
+import OfficialNotices from './OfficialNotices'
+// ...existing code for api usage is in `apiGet`
 import { logger } from '../utils/logger'
 
 /**
@@ -29,10 +31,19 @@ interface NewsArticle {
   source: string
   publishedAt: string
 }
+interface OfficialItem {
+  id?: string
+  title: string
+  url: string
+  excerpt?: string
+  publishedAt?: string
+  source: string
+}
 
 function Dashboard() {
   const [shutdowns, setShutdowns] = useState<ShutdownData[]>([])
   const [news, setNews] = useState<NewsArticle[]>([])
+  const [canonical, setCanonical] = useState<OfficialItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'timeline' | 'sankey' | 'calculator'>('timeline')
@@ -46,25 +57,31 @@ function Dashboard() {
       setLoading(true)
       setError(null)
 
-      logger.info('Fetching dashboard data')
-
-      // Fetch shutdown data using centralized API
-      const shutdownData = await fetchShutdowns()
+      // Fetch shutdown data using API utility with timeout
+      const shutdownData = await apiGet<{ data: ShutdownData[] }>('/api/shutdowns')
       setShutdowns(shutdownData.data || [])
 
-      // Fetch news (optional)
+      // Fetch news (optional) using API utility
       try {
-        const newsData = await fetchNews(undefined, 10)
+        const newsData = await apiGet<{ articles: NewsArticle[] }>('/api/news', { pageSize: '10' })
         setNews(newsData.articles || [])
-      } catch (newsError: any) {
-        logger.warn('News fetch failed (optional):', newsError)
+      } catch (newsError: unknown) {
+        logger.warn('News fetch failed (optional):', String(newsError))
+      }
+
+      // Fetch canonical official feed (optional)
+      try {
+        const canonicalData = await apiGet<{ items: OfficialItem[] }>('/api/official/canonical')
+        setCanonical(canonicalData.items || [])
+      } catch (canonicalError: unknown) {
+        logger.warn('Failed to load canonical official feed:', String(canonicalError))
       }
 
       logger.info('Dashboard data loaded successfully')
       setLoading(false)
-    } catch (err: any) {
-      logger.error('Error fetching data:', err)
-      setError(sanitizeString(err.message || 'Failed to load dashboard data. Please try again.'))
+    } catch (err: unknown) {
+      logger.error('Error fetching data:', String(err))
+      setError(err instanceof Error ? err.message : String(err) || 'Failed to load dashboard data. Please try again.')
       setLoading(false)
     }
   }
@@ -204,13 +221,15 @@ function Dashboard() {
         </div>
 
         <div style={{ padding: 'var(--spacing-lg)' }}>
-          {activeTab === 'timeline' && <Timeline shutdowns={shutdowns} />}
+          {activeTab === 'timeline' && <Timeline shutdowns={shutdowns} canonical={canonical} />}
           {activeTab === 'sankey' && <SankeyDiagram shutdowns={shutdowns} />}
           {activeTab === 'calculator' && <ImpactCalculator />}
         </div>
       </div>
 
       {/* News Feed */}
+      {/* Official Notices */}
+      <OfficialNotices />
       {news.length > 0 && (
         <div className="card">
           <div className="card-header">
@@ -246,7 +265,9 @@ function Dashboard() {
                     fontSize: '0.75rem',
                     color: 'var(--color-text-muted)'
                   }}>
-                    <span>{article.source}</span>
+                    <span>
+                      <span className="badge badge-small" style={{ marginRight: '8px' }}>{article.source}</span>
+                    </span>
                     <span>{new Date(article.publishedAt).toLocaleDateString()}</span>
                   </div>
                 </div>

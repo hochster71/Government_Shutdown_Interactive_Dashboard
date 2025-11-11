@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { calculateImpact, sanitizeString } from '../utils/api'
-import { logger } from '../utils/logger'
+import { apiPost } from '../utils/api'
 
 /**
  * Impact Calculator Component
@@ -28,6 +27,12 @@ interface ImpactResult {
   note: string
 }
 
+// Validation constants
+const VALIDATION_RULES = {
+  duration: { min: 1, max: 365 },
+  affectedWorkers: { min: 1000, max: 3000000 }
+};
+
 function ImpactCalculator() {
   const [duration, setDuration] = useState<number>(30)
   const [affectedWorkers, setAffectedWorkers] = useState<number>(800000)
@@ -36,55 +41,60 @@ function ImpactCalculator() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<{
-    duration?: string
-    workers?: string
+    duration?: string;
+    affectedWorkers?: string;
   }>({})
 
+  // Validate inputs
   const validateInputs = (): boolean => {
-    const errors: { duration?: string; workers?: string } = {}
+    const errors: { duration?: string; affectedWorkers?: string } = {};
 
-    if (duration < 1 || duration > 365) {
-      errors.duration = 'Duration must be between 1 and 365 days'
+    if (duration < VALIDATION_RULES.duration.min || duration > VALIDATION_RULES.duration.max) {
+      errors.duration = `Duration must be between ${VALIDATION_RULES.duration.min} and ${VALIDATION_RULES.duration.max} days`;
     }
 
-    if (affectedWorkers < 1000 || affectedWorkers > 3000000) {
-      errors.workers = 'Affected workers must be between 1,000 and 3,000,000'
+    if (affectedWorkers < VALIDATION_RULES.affectedWorkers.min || affectedWorkers > VALIDATION_RULES.affectedWorkers.max) {
+      errors.affectedWorkers = `Affected workers must be between ${VALIDATION_RULES.affectedWorkers.min.toLocaleString()} and ${VALIDATION_RULES.affectedWorkers.max.toLocaleString()}`;
     }
 
-    setValidationErrors(errors)
-    return Object.keys(errors).length === 0
-  }
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleDurationChange = (value: number) => {
-    const sanitized = Math.max(1, Math.min(365, Math.floor(value)))
-    setDuration(sanitized)
-    setValidationErrors(prev => ({ ...prev, duration: undefined }))
-  }
+    const clampedValue = Math.max(VALIDATION_RULES.duration.min, Math.min(VALIDATION_RULES.duration.max, value));
+    setDuration(clampedValue);
+    setValidationErrors({ ...validationErrors, duration: undefined });
+  };
 
   const handleWorkersChange = (value: number) => {
-    const sanitized = Math.max(1000, Math.min(3000000, Math.floor(value)))
-    setAffectedWorkers(sanitized)
-    setValidationErrors(prev => ({ ...prev, workers: undefined }))
-  }
+    const clampedValue = Math.max(VALIDATION_RULES.affectedWorkers.min, Math.min(VALIDATION_RULES.affectedWorkers.max, value));
+    setAffectedWorkers(clampedValue);
+    setValidationErrors({ ...validationErrors, affectedWorkers: undefined });
+  };
 
-  const handleCalculate = async () => {
+  const calculateImpact = async () => {
+    // Validate before submitting
     if (!validateInputs()) {
-      return
+      setError('Please fix the validation errors before calculating');
+      return;
     }
 
     try {
       setLoading(true)
       setError(null)
 
-      logger.info('Calculating impact', { duration, affectedWorkers, year })
+      const data = await apiPost<ImpactResult>('/api/impact/calc', {
+        duration,
+        affectedWorkers,
+        year,
+      });
 
-      const data = await calculateImpact(duration, affectedWorkers, year)
       setResult(data)
-      logger.info('Impact calculated successfully')
-    } catch (err: any) {
-      logger.error('Error calculating impact:', err)
-      setError(sanitizeString(err.message || 'Failed to calculate economic impact. Please try again.'))
-    } finally {
+      setLoading(false)
+    } catch (err) {
+      console.error('Error calculating impact:', err)
+      setError(err instanceof Error ? err.message : 'Failed to calculate economic impact. Please try again.')
       setLoading(false)
     }
   }
@@ -106,11 +116,9 @@ function ImpactCalculator() {
             max="365"
             value={duration}
             onChange={(e) => handleDurationChange(parseInt(e.target.value) || 1)}
-            aria-invalid={!!validationErrors.duration}
-            aria-describedby={validationErrors.duration ? 'duration-error' : undefined}
           />
           {validationErrors.duration && (
-            <div id="duration-error" style={{ color: 'var(--color-accent-red)', fontSize: '0.875rem', marginTop: 'var(--spacing-xs)' }}>
+            <div style={{ color: 'var(--color-accent-red)', fontSize: '0.875rem', marginTop: 'var(--spacing-xs)' }}>
               {validationErrors.duration}
             </div>
           )}
@@ -118,7 +126,7 @@ function ImpactCalculator() {
             type="range"
             min="1"
             max="90"
-            value={Math.min(duration, 90)}
+            value={duration}
             onChange={(e) => handleDurationChange(parseInt(e.target.value))}
             style={{ width: '100%', marginTop: 'var(--spacing-sm)' }}
           />
@@ -134,12 +142,10 @@ function ImpactCalculator() {
             step="10000"
             value={affectedWorkers}
             onChange={(e) => handleWorkersChange(parseInt(e.target.value) || 800000)}
-            aria-invalid={!!validationErrors.workers}
-            aria-describedby={validationErrors.workers ? 'workers-error' : undefined}
           />
-          {validationErrors.workers && (
-            <div id="workers-error" style={{ color: 'var(--color-accent-red)', fontSize: '0.875rem', marginTop: 'var(--spacing-xs)' }}>
-              {validationErrors.workers}
+          {validationErrors.affectedWorkers && (
+            <div style={{ color: 'var(--color-accent-red)', fontSize: '0.875rem', marginTop: 'var(--spacing-xs)' }}>
+              {validationErrors.affectedWorkers}
             </div>
           )}
           <input
@@ -156,7 +162,7 @@ function ImpactCalculator() {
 
       <button
         className="btn btn-primary"
-        onClick={handleCalculate}
+        onClick={calculateImpact}
         disabled={loading}
         style={{ width: '100%', padding: 'var(--spacing-md)' }}
       >
@@ -290,7 +296,7 @@ function ImpactCalculator() {
               <strong>Lost Productivity:</strong> Permanent economic losses that cannot be recovered even after the shutdown ends.
             </p>
             <p style={{ fontSize: '0.875rem', marginBottom: 0 }}>
-              <strong>GDP Impact:</strong> The shutdown's effect on the nation's Gross Domestic Product as a percentage.
+              <strong>GDP Impact:</strong> The shutdown&apos;s effect on the nation&apos;s Gross Domestic Product as a percentage.
             </p>
           </div>
         </div>

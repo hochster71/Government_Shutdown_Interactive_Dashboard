@@ -8,10 +8,7 @@
     "dev": "node --watch server.js",
     "start": "node server.js",
     "build": "echo 'No build step required for backend'",
-    "test": "NODE_ENV=test NODE_OPTIONS='--experimental-vm-modules' jest",
-    "test:watch": "NODE_ENV=test NODE_OPTIONS='--experimental-vm-modules' jest --watch",
-    "test:verbose": "NODE_ENV=test NODE_OPTIONS='--experimental-vm-modules' jest --verbose",
-    "test:coverage": "NODE_ENV=test NODE_OPTIONS='--experimental-vm-modules' jest --coverage"
+    "test": "NODE_OPTIONS='--experimental-vm-modules' npx jest --config=jest.config.json"
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",
@@ -21,6 +18,8 @@
     "express-rate-limit": "^7.1.5",
     "express-validator": "^7.0.1",
     "helmet": "^7.1.0",
+    "compression": "^1.7.4",
+    "morgan": "^1.10.0",
     "node-cache": "^5.1.2",
     "node-cron": "^3.0.3",
     "pino": "^8.16.2",

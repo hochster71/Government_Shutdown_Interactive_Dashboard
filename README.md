@@ -106,6 +106,92 @@ npm start
 
 The application will be available at http://localhost:3001
 
+## Testing
+
+### Running Tests
+
+Run backend tests:
+```bash
+npm test --workspace=backend
+```
+
+Run all tests:
+```bash
+# Backend tests
+npm test --workspace=backend
+
+# Frontend build (validates TypeScript)
+npm run build --workspace=frontend
+```
+
+### CI/CD
+
+This project uses GitHub Actions for continuous integration. The workflow:
+1. Runs backend unit tests (Jest)
+2. Builds the frontend (TypeScript + Vite)
+3. Runs integration tests (API endpoint validation)
+4. Performs security checks (npm audit, secrets scanning)
+
+To run CI checks locally:
+```bash
+# Install all dependencies
+npm run install:all
+
+# Run backend tests
+npm test --workspace=backend
+
+# Build frontend
+npm run build --workspace=frontend
+
+# Test backend is working (in separate terminal)
+npm run dev:backend
+# Then test endpoints with curl
+curl http://localhost:3001/health
+curl http://localhost:3001/api/shutdowns
+curl -X POST http://localhost:3001/api/impact/calc \
+  -H "Content-Type: application/json" \
+  -d '{"duration": 30, "affectedWorkers": 800000}'
+```
+
+## Security
+
+This dashboard implements multiple security measures:
+
+### Backend Security
+- **Helmet.js** - Security headers (XSS protection, CSP, frame options, etc.)
+- **Input Validation** - express-validator for all user inputs
+- **Rate Limiting** - 100 requests per 15 minutes per IP
+- **CORS Protection** - Environment-specific origin restrictions
+- **Timeout Protection** - AbortController for all external requests
+- **Error Handling** - No stack traces in production
+- **Request Size Limits** - Body size limited to 100KB
+
+### Frontend Security
+- **Content Security Policy** - Restricts script, style, and resource origins
+- **Input Validation** - Client-side validation with range limits
+- **Timeout Handling** - 15-second timeout for all API requests
+- **Error Boundaries** - Graceful error handling
+- **Safe External Links** - All external links use `rel="noopener noreferrer"`
+
+### Data Protection
+- **No Hardcoded Secrets** - All sensitive data in environment variables
+- **Sanitized Outputs** - All data properly escaped and sanitized
+- **Retry Logic** - Exponential backoff for external API requests
+- **Graceful Degradation** - Fallback data when external sources fail
+
+### Security Audit
+Run security audits:
+```bash
+# Check for vulnerabilities
+npm audit --workspace=backend
+npm audit --workspace=frontend
+
+# Fix non-breaking vulnerabilities
+npm audit fix
+```
+
+**Note**: The esbuild vulnerability flagged by npm audit only affects the development server and does not impact production builds.
+
 ## Project Structure
 
 ```
@@ -172,11 +258,43 @@ The scheduler runs in the background and logs all update activity for monitoring
 
 - `NEWSAPI_KEY` - API key for NewsAPI (optional, but recommended)
 - `PORT` - Backend server port (default: 3001)
-- `NODE_ENV` - Environment mode (development/production)
-- `LOG_LEVEL` - Logging level: debug, info, warn, error (default: debug in dev, info in prod)
-- `ALLOWED_ORIGIN` - CORS allowed origin (required in production, default: http://localhost:5173 in dev)
+- `NODE_ENV` - Environment mode (`development` or `production`)
+- `ALLOWED_ORIGIN` - CORS allowed origin for API requests
+  - **Development**: `http://localhost:5173` (default)
+  - **Production**: Set to your production domain (e.g., `https://yourdomain.com`) or same origin
 
 See `.env.example` for all available options.
+
+### Security Configuration
+
+#### CORS (Cross-Origin Resource Sharing)
+The backend uses strict CORS policies that vary by environment:
+
+- **Development**: Allows `http://localhost:5173` for local frontend development
+- **Production**: Only allows the origin specified in `ALLOWED_ORIGIN` environment variable
+
+To configure for production:
+```bash
+# In your .env file
+NODE_ENV=production
+ALLOWED_ORIGIN=https://yourdomain.com
+```
+
+#### Content Security Policy
+The frontend includes CSP headers that restrict:
+- Script sources to self and inline scripts (for Vite development)
+- Style sources to self and inline styles
+- Image sources to self, data URIs, and HTTPS
+- API connections to self and approved external APIs (NewsAPI, Wikipedia)
+
+#### Input Validation
+All API endpoints validate and sanitize inputs:
+- `/api/impact/calc` - Validates duration (1-365 days) and affected workers (1,000-3,000,000)
+- `/api/news` - Validates query parameters, limits page size, and sanitizes input
+
+#### Rate Limiting
+API endpoints are protected with rate limiting:
+- Maximum 100 requests per 15 minutes per IP address
 
 ### Graceful Fallbacks
 
