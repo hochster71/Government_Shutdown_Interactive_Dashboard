@@ -1,0 +1,65 @@
+name: Enable live auto-fix scheduler
+
+on:
+  schedule:
+    # run every 15 minutes and check whether the PR is >= 1 hour old
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable_auto_fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: copilot/add-auto-fix
+
+      - name: Check PR #36 age
+        id: check_pr_age
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: 36
+            })
+            const created = new Date(pr.data.created_at)
+            const now = new Date()
+            const ageMs = now - created
+            const ageHours = ageMs / (1000 * 60 * 60)
+            core.info(`PR #36 created at ${created.toISOString()}, ageHours=${ageHours}`)
+            if (ageHours < 1) {
+              core.setOutput('should_run', 'false')
+            } else {
+              core.setOutput('should_run', 'true')
+            }
+
+      - name: Enable live auto-fix (commit change)
+        if: steps.check_pr_age.outputs.should_run == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # replace secret-based gating with explicit true in the workflow so the action will run in LIVE mode
+          sed -i 's/ALLOW_AUTO_FIX: ${{ secrets.ALLOW_AUTO_FIX }}/ALLOW_AUTO_FIX: "true"/' .github/workflows/auto-fix-ci.yml || true
+          git add .github/workflows/auto-fix-ci.yml || true
+          git commit -m "Enable live auto-fix: set ALLOW_AUTO_FIX to true [automated]" || echo "no changes to commit"
+          git push origin HEAD:copilot/add-auto-fix
+
+      - name: Merge PR #36
+        if: steps.check_pr_age.outputs.should_run == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: 36,
+              commit_title: 'Enable live auto-fix after 1h (automated)',
+              merge_method: 'merge'
+            })

@@ -27,15 +27,34 @@ def normalize():
 
     canonical = { 'parsed_at': parsed.get('parsed_at'), 'items': [] }
 
+    import re
+    date_patterns = [
+        # e.g., November 10, 2025
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s*\d{4}",
+        # e.g., 2025-11-10 or 2025/11/10
+        r"\d{4}[\-/]\d{1,2}[\-/]\d{1,2}",
+        # e.g., Mon, 10 Nov 2025
+        r"\b\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}\b",
+    ]
+
     for source in parsed.get('sources', []):
         src_name = source.get('source')
         for it in source.get('items', []):
-            canonical['items'].append({
+            item = {
                 'source': src_name,
                 'title': it.get('title'),
                 'url': it.get('url'),
                 'excerpt': it.get('excerpt'),
-            })
+                'publishedAt': None
+            }
+            text_to_search = ' '.join([str(item.get('title') or ''), str(item.get('excerpt') or '')])
+            # try to find a date pattern
+            for pat in date_patterns:
+                m = re.search(pat, text_to_search)
+                if m:
+                    item['publishedAt'] = m.group(0)
+                    break
+            canonical['items'].append(item)
 
     # dedupe by url
     seen = set()

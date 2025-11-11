@@ -35,6 +35,7 @@ interface NewsArticle {
 function Dashboard() {
   const [shutdowns, setShutdowns] = useState<ShutdownData[]>([])
   const [news, setNews] = useState<NewsArticle[]>([])
+  const [canonical, setCanonical] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'timeline' | 'sankey' | 'calculator'>('timeline')
@@ -58,6 +59,14 @@ function Dashboard() {
         setNews(newsData.articles || [])
       } catch (newsError: any) {
         logger.warn('News fetch failed (optional):', newsError)
+      }
+
+      // Fetch canonical official feed (optional)
+      try {
+        const canonicalData = await apiGet<{ items: any[] }>('/api/official/canonical')
+        setCanonical(canonicalData.items || [])
+      } catch (canonicalError: any) {
+        logger.warn('Failed to load canonical official feed:', canonicalError)
       }
 
       logger.info('Dashboard data loaded successfully')
@@ -204,7 +213,7 @@ function Dashboard() {
         </div>
 
         <div style={{ padding: 'var(--spacing-lg)' }}>
-          {activeTab === 'timeline' && <Timeline shutdowns={shutdowns} />}
+          {activeTab === 'timeline' && <Timeline shutdowns={shutdowns} canonical={canonical} />}
           {activeTab === 'sankey' && <SankeyDiagram shutdowns={shutdowns} />}
           {activeTab === 'calculator' && <ImpactCalculator />}
         </div>

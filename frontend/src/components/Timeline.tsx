@@ -18,9 +18,10 @@ interface ShutdownData {
 
 interface TimelineProps {
   shutdowns: ShutdownData[]
+  canonical?: Array<{ source: string, title: string, url: string, excerpt?: string, publishedAt?: string }>
 }
 
-function Timeline({ shutdowns }: TimelineProps) {
+function Timeline({ shutdowns, canonical = [] }: TimelineProps) {
   const svgRef = useRef<SVGSVGElement>(null)
 
   useEffect(() => {
@@ -170,6 +171,44 @@ function Timeline({ shutdowns }: TimelineProps) {
       .duration(800)
       .delay((_d, i) => i * 50)
       .attr('r', 6)
+
+    // After rendering, add related official notices links in the Details list
+    // We'll render this client-side by manipulating the Shutdown Details DOM below
+    // Build a simple map of canonical items by year for quick lookup
+    const canonicalByYear = {} as Record<string, Array<any>>
+    canonical.forEach((it: any) => {
+      try {
+        const text = (it.title || '') + ' ' + (it.excerpt || '')
+        const yearMatch = text.match(/(19|20)\d{2}/)
+        if (yearMatch) {
+          const y = yearMatch[0]
+          canonicalByYear[y] = canonicalByYear[y] || []
+          canonicalByYear[y].push(it)
+        }
+      } catch (e) {}
+    })
+
+    // For each shutdown detail card, append related links if available
+    d3.selectAll('div').filter(function() {
+      // find cards by class and structure - match the Shutdown Details container
+      return d3.select(this).select('strong').size() > 0 && d3.select(this).select('span.badge-blue').size() > 0
+    }).each(function() {
+      try {
+        const node = d3.select(this)
+        const strong = node.select('strong').text() || ''
+        const yearMatch = strong.match(/(19|20)\d{2}/)
+        if (!yearMatch) return
+        const year = yearMatch[0]
+        const items = canonicalByYear[year] || []
+        if (items.length === 0) return
+        const container = node.append('div').style('margin-top', '8px')
+        container.append('div').style('font-size', '0.85rem').style('color', '#cbd5e1').text('Related official notices:')
+        const list = container.append('ul').style('margin', '6px 0 0 16px')
+        items.slice(0,3).forEach((it: any) => {
+          list.append('li').html(`<a href="${it.url}" target="_blank" style="color:#7dd3fc">${it.title}</a>`)
+        })
+      } catch (e) {}
+    })
 
     // Cleanup tooltip on unmount
     return () => {

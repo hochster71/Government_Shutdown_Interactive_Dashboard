@@ -1,0 +1,337 @@
+{
+  "fetched_at": "20251111T145247Z",
+  "sources": [
+    {
+      "source": "New York Times",
+      "url": "https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml",
+      "items": [
+        {
+          "title": "‘It Feels Like I’m in a Nightmare’: Inside the First Deportation Flight to Iran",
+          "url": "https://www.nytimes.com/2025/11/11/world/middleeast/iran-trump-deportation-flight.html",
+          "publishedAt": "Tue, 11 Nov 2025 10:01:48 +0000",
+          "description": "For decades, Iranians fleeing persecution have found protection in the United States. But this fall, the Trump administration deported a planeload of people to Iran after making a deal with Tehran."
+        },
+        {
+          "title": "Dismantled by DOGE, a Foreign Policy Center Finds New Life",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/kennan-institute-doge-trump.html",
+          "publishedAt": "Tue, 11 Nov 2025 03:36:40 +0000",
+          "description": "The Kennan Institute, which researches Russia and the surrounding region, has re-emerged in a form that is smaller but more impervious to government control."
+        },
+        {
+          "title": "For Trump, Nothing Was Off Limits During the Shutdown",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/trump-government-shutdown.html",
+          "publishedAt": "Tue, 11 Nov 2025 14:27:07 +0000",
+          "description": "President Trump pressured Democrats by taking punishing actions no previous administration ever took during a shutdown."
+        },
+        {
+          "title": "Shutdown Deal Revives Democratic Infighting",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/shutdown-deal-revives-democratic-infighting.html",
+          "publishedAt": "Tue, 11 Nov 2025 02:36:39 +0000",
+          "description": "The agreement prompted a backlash within the party, not only against the Democratic defectors who supported it, but against Senator Chuck Schumer, the leader who did not."
+        },
+        {
+          "title": "Trump Asks Supreme Court to Overturn Verdict in E. Jean Carroll Case",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/trump-supreme-court-e-jean-carroll.html",
+          "publishedAt": "Tue, 11 Nov 2025 01:16:31 +0000",
+          "description": "The president said the assertions behind a judgment that he sexually abused and defamed the writer were “implausible” and “unsubstantiated.”"
+        },
+        {
+          "title": "Trump Pardons the Husband of a Republican Congressional Ally",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/trump-pardon-republican-harshbarger.html",
+          "publishedAt": "Tue, 11 Nov 2025 03:56:31 +0000",
+          "description": "Robert Harshbarger Jr. pleaded guilty in 2013 to health care fraud and distributing a misbranded drug. His wife, Diana Harshbarger, is a member of Congress."
+        },
+        {
+          "title": "Age Is the Issue That Democrats Can’t Shut Down",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/democrats-shutdown-age.html",
+          "publishedAt": "Tue, 11 Nov 2025 01:01:43 +0000",
+          "description": "A restless Democratic base is seething at older leaders in Washington."
+        },
+        {
+          "title": "Travelers Battle More Flight Disruptions Amid Shutdown Talks",
+          "url": "https://www.nytimes.com/2025/11/10/us/flights-cancellations-delays-airports-shutdown.html",
+          "publishedAt": "Mon, 10 Nov 2025 23:28:47 +0000",
+          "description": "The travel turmoil led some fliers to embark on time-consuming detours as they monitored talks in Washington to end the government shutdown."
+        },
+        {
+          "title": "Groups Sue to Reverse Trump’s Cuts to Energy Projects in Democratic States",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/trump-shutdown-cuts-lawsuit.html",
+          "publishedAt": "Tue, 11 Nov 2025 02:38:33 +0000",
+          "description": "A lawsuit filed on Monday argued that the president has discriminated against blue states by slashing federal funds for political leverage during the shutdown."
+        },
+        {
+          "title": "Spending Bill Would Pave Way for Senators to Sue Over Phone Searches",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/senators-shutdown-smith-phone-searches.html",
+          "publishedAt": "Mon, 10 Nov 2025 22:01:52 +0000",
+          "description": "Republicans have voiced outrage that Jack Smith looked at G.O.P. lawmakers’ phone records surrounding the Jan. 6 attack. Legislation to reopen the government would allow them to sue for $500,000 each."
+        },
+        {
+          "title": "More Flight Troubles Expected Before the Shutdown Ends",
+          "url": "https://www.nytimes.com/2025/11/10/business/airlines-cancellations-senate-deal.html",
+          "publishedAt": "Mon, 10 Nov 2025 23:04:20 +0000",
+          "description": "Airlines brace for further chaos, even as eight Democratic senators broke ranks with their party to back a deal that could end the shutdown."
+        },
+        {
+          "title": "Jeanne Shaheen Faces Shutdown Blowback From Her Daughter",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/jeanne-shaheen-stefany-shutdown-deal.html",
+          "publishedAt": "Mon, 10 Nov 2025 23:22:08 +0000",
+          "description": "Senator Jeanne Shaheen of New Hampshire voted to move to end the shutdown. But her daughter Stefany Shaheen, a congressional candidate in their state, sharply criticized the deal."
+        },
+        {
+          "title": "Supreme Court to Hear Major Challenge to Mail-In Ballot Laws",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/supreme-court-mail-ballots-mississippi.html",
+          "publishedAt": "Tue, 11 Nov 2025 02:17:39 +0000",
+          "description": "The justices agreed to hear a challenge to Mississippi’s law, a case that could upend similar measures in dozens of states before the 2026 election."
+        },
+        {
+          "title": "Supreme Court Denies Request to Revisit Same-Sex Marriage Decision",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/supreme-court-same-sex-marriage.html",
+          "publishedAt": "Mon, 10 Nov 2025 20:26:19 +0000",
+          "description": "Kim Davis, a Kentucky county clerk who refused to issue same-sex marriage licenses, had asked the court to reconsider its landmark 2015 opinion."
+        },
+        {
+          "title": "Bernie Sanders Endorses Peggy Flanagan for Senate in Minnesota",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/bernie-sanders-peggy-flanagan-michigan-senate-endorsement.html",
+          "publishedAt": "Mon, 10 Nov 2025 14:00:06 +0000",
+          "description": "Senator Bernie Sanders is backing Lt. Gov. Peggy Flanagan in her state’s Democratic primary race for Senate, his latest attempt to pull the party to the left."
+        },
+        {
+          "title": "U.S. Military Kills 6 in Strikes on Suspected Drug Boats, Hegseth Says",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/us-boat-strike-deaths-hegseth.html",
+          "publishedAt": "Mon, 10 Nov 2025 14:27:58 +0000",
+          "description": "The latest strikes raised the death toll in the campaign to 76 people in 19 attacks in the Pacific and the Caribbean Sea since early September."
+        },
+        {
+          "title": "Trump Administration Returns to Supreme Court in Food Stamp Fight",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/appeals-court-trump-snap-funding-shutdown.html",
+          "publishedAt": "Tue, 11 Nov 2025 02:39:34 +0000",
+          "description": "But the administration indicated it might not be necessary, as Congress moved toward a deal to fund the government."
+        },
+        {
+          "title": "Which Senators Broke Ranks With Democrats to Advance the GOP Plan to End the Government Shutdown?",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/senators-democrat-shutdown-vote.html",
+          "publishedAt": "Mon, 10 Nov 2025 20:10:29 +0000",
+          "description": "Two of them are retiring, and none of the others face re-election in 2026."
+        },
+        {
+          "title": "Senate Passes Bill to Reopen Government Amid Democratic Rift",
+          "url": "https://www.nytimes.com/2025/11/10/us/politics/senate-government-shutdown.html",
+          "publishedAt": "Tue, 11 Nov 2025 12:26:35 +0000",
+          "description": "The vote, on Day 41 of the shutdown, signaled an end in sight to weeks of gridlock. Eight members of the Democratic Caucus supplied the critical backing."
+        },
+        {
+          "title": "Syria’s President Meets Trump at White House for First Time",
+          "url": "https://www.nytimes.com/2025/11/10/world/middleeast/syria-president-al-shara-trump-washington.html",
+          "publishedAt": "Tue, 11 Nov 2025 00:52:53 +0000",
+          "description": "The visit by President Ahmed al-Shara is another step in the transformation of the former rebel leader once wanted by the United States as a terrorist."
+        }
+      ]
+    },
+    {
+      "source": "AP",
+      "url": "https://apnews.com/hub/politics/rss",
+      "items": []
+    },
+    {
+      "source": "NPR",
+      "url": "https://feeds.npr.org/1001/rss.xml",
+      "items": [
+        {
+          "title": "The Supreme Court will hear a challenge to grace periods for mail ballot returns",
+          "url": "https://www.npr.org/2025/11/11/nx-s1-5462829/mail-ballot-grace-period-supreme-court",
+          "publishedAt": "Tue, 11 Nov 2025 09:40:20 -0500",
+          "description": "The Supreme Court will hear a case that could decide whether states can count postmarked mail ballots that arrive after Election Day — something that about 20 states and territories currently allow."
+        },
+        {
+          "title": "COVID vaccine rollout and pandemic preparedness assessed in new book, 'Fair Doses'",
+          "url": "https://www.npr.org/sections/goats-and-soda/2025/11/11/g-s1-97230/vaccines-pandemic-preparedness-covid-seth-berkley-fair-doses",
+          "publishedAt": "Tue, 11 Nov 2025 08:16:45 -0500",
+          "description": "In his new book,<em> '</em>Fair Doses,' epidemiologist Seth Berkley discusses what went right -- and wrong -- with COVID vaccine distribution and whether the world is ready if a new pandemic were to strike."
+        },
+        {
+          "title": "'Nuremberg' is full of big questions — and missed opportunities",
+          "url": "https://www.npr.org/2025/11/11/nx-s1-5598444/nuremberg-movie-review-2025-russell-crowe-rami-malek",
+          "publishedAt": "Tue, 11 Nov 2025 08:00:00 -0500",
+          "description": "The new film portrays Hitler's second-in-command, Hermann Goering, as a wily mastermind, sidestepping uncomfortable questions about how unexceptional evil can be."
+        },
+        {
+          "title": "Senate approves legislation to end shutdown. And, where climate change efforts stand",
+          "url": "https://www.npr.org/2025/11/11/g-s1-97364/up-first-newsletter-house-returns-government-shutdown-cop30",
+          "publishedAt": "Tue, 11 Nov 2025 07:24:02 -0500",
+          "description": "The House returns to vote on a bipartisan bill that could end the government shutdown. And, at the COP30, data show the world is still far from meeting its climate goals."
+        },
+        {
+          "title": "9 strategies to find free or low-cost food when money is tight",
+          "url": "https://www.npr.org/2025/11/11/nx-s1-5599147/9-strategies-to-find-free-or-low-cost-food-when-money-is-tight",
+          "publishedAt": "Tue, 11 Nov 2025 07:15:00 -0500",
+          "description": "Kevin Curry, a food influencer and a former SNAP recipient, explains where SNAP recipients can get the most up-to-date information on their benefits, and how anyone can find free or affordable food."
+        },
+        {
+          "title": "I'm pregnant but my doctor won't see me before 9 weeks. Why not? Is it OK to wait?",
+          "url": "https://www.npr.org/2025/11/11/nx-s1-5604880/pregnant-early-pregnancy-prenatal-care-visit",
+          "publishedAt": "Tue, 11 Nov 2025 07:00:00 -0500",
+          "description": "A pregnancy test can tell you that you're expecting as early as 4 weeks, but most doctors won't see you for another month. Many women want care sooner. Why's it so hard to get and what can you do?"
+        },
+        {
+          "title": "How to avoid 'The Winner's Curse'",
+          "url": "https://www.npr.org/sections/planet-money/2025/11/11/g-s1-96954/how-to-avoid-the-winners-curse",
+          "publishedAt": "Tue, 11 Nov 2025 06:30:00 -0500",
+          "description": "A new book by the Nobel-winning pioneer of behavioral economics offers some advice we can all use."
+        },
+        {
+          "title": "A suicide bomber targets an Islamabad court, killing 12 people and wounding 27",
+          "url": "https://www.npr.org/2025/11/11/nx-s1-5605375/a-suicide-bomber-targets-an-islamabad-court-killing-12-people-and-wounding-27",
+          "publishedAt": "Tue, 11 Nov 2025 05:55:43 -0500",
+          "description": "No group immediately claimed responsibility for the explosion, which also wounded at least 27 people, but Pakistan has struggled over the past months with a resurgent Pakistani Taliban."
+        },
+        {
+          "title": "Trump floats tariff 'dividends' even while plan shows major flaws",
+          "url": "https://www.npr.org/2025/11/11/nx-s1-5604681/trump-tariff-dividends-flaws",
+          "publishedAt": "Tue, 11 Nov 2025 05:04:50 -0500",
+          "description": "President Trump says the government will distribute checks to Americans from tariff revenue. Here's what that could mean."
+        },
+        {
+          "title": "Climate negotiations have started. Here's how far countries need to go",
+          "url": "https://www.npr.org/2025/11/11/nx-s1-5593050/climate-emissions-gap-cop30",
+          "publishedAt": "Tue, 11 Nov 2025 05:00:00 -0500",
+          "description": "Nations have begun climate negotiations at the COP30 summit in Brazil. Studies show the world is not on track to avoid the most damaging impacts of climate change."
+        }
+      ]
+    },
+    {
+      "source": "Politico",
+      "url": "https://www.politico.com/rss/politics08.xml",
+      "items": []
+    },
+    {
+      "source": "Reuters",
+      "url": "https://www.reuters.com/tools/rss",
+      "items": []
+    },
+    {
+      "source": "Washington Post",
+      "url": "http://feeds.washingtonpost.com/rss/politics",
+      "items": [
+        {
+          "title": "Judge’s ruling likely to give Democrats a congressional seat in Utah",
+          "url": "https://www.washingtonpost.com/politics/2025/11/11/utah-congressional-map-democrats/",
+          "publishedAt": "Tue, 11 Nov 2025 14:04:15 +0000",
+          "description": "The ruling is a blow for Republicans in the broader national redistricting battle between the parties ahead of next year’s midterms."
+        },
+        {
+          "title": "Democrats push for a ‘ruthlessly pragmatic’ approach to counter Trump",
+          "url": "https://www.washingtonpost.com/politics/2025/11/11/democrats-shutdown-trump/",
+          "publishedAt": "Tue, 11 Nov 2025 10:19:17 +0000",
+          "description": "There were seething accusations of capitulation at eight Democratic-aligned senators who broke ranks to join Republicans in voting to end the shutdown."
+        },
+        {
+          "title": "When neighbors lost SNAP benefits, the internet stepped in to feed them",
+          "url": "https://www.washingtonpost.com/politics/2025/11/11/snap-online-donations-neighbors-help/",
+          "publishedAt": "Tue, 11 Nov 2025 10:00:49 +0000",
+          "description": "People are influencing politics and increasingly finding food for their families by telling their stories of economic struggle online in ways that were not possible even a few years ago."
+        },
+        {
+          "title": "How women feel about Trump’s presidency: Heartbreak, fatigue, gratitude",
+          "url": "https://www.washingtonpost.com/politics/interactive/2025/women-reaction-trump-second-presidency/",
+          "publishedAt": "Tue, 11 Nov 2025 10:00:06 +0000",
+          "description": "We asked women how they felt about Trump right after he won the election. One year later, we caught up with them to see how they feel now."
+        },
+        {
+          "title": "How every senator voted on the bill to reopen the government",
+          "url": "https://www.washingtonpost.com/politics/interactive/2025/11/11/senate-government-shutdown-vote-count/",
+          "publishedAt": "Tue, 11 Nov 2025 09:55:18 +0000",
+          "description": "See how your lawmaker voted."
+        },
+        {
+          "title": "Trump says staunch ally Greene has ‘lost her way’",
+          "url": "https://www.washingtonpost.com/politics/2025/11/10/trump-mtg-greene-criticism-shutdown/",
+          "publishedAt": "Tue, 11 Nov 2025 00:07:35 +0000",
+          "description": "The Republican congresswoman accused the White House of focusing on foreign affairs instead of domestic ones."
+        },
+        {
+          "title": "Trump administration asks Supreme Court to intervene in SNAP fight again",
+          "url": "https://www.washingtonpost.com/politics/2025/11/10/snap-supreme-court-food-assistance-trump-benefits/",
+          "publishedAt": "Mon, 10 Nov 2025 23:37:11 +0000",
+          "description": "The battle over funding for the nation’s largest anti-hunger program has left millions wondering how they will afford food."
+        },
+        {
+          "title": "Supreme Court won’t hear challenge to landmark gay marriage ruling",
+          "url": "https://www.washingtonpost.com/politics/2025/11/10/supreme-court-same-sex-marriage/",
+          "publishedAt": "Mon, 10 Nov 2025 20:45:18 +0000",
+          "description": "The announcement indicates there is not an appetite among the high court’s conservative majority to revisit one of the court’s most significant decisions in recent years."
+        },
+        {
+          "title": "Supreme Court to decide if mail-in ballots may arrive after Election Day",
+          "url": "https://www.washingtonpost.com/politics/2025/11/10/supreme-court-mail-in-ballots-mississippi/",
+          "publishedAt": "Mon, 10 Nov 2025 20:00:24 +0000",
+          "description": "An appeals court found that federal law requires all ballots to be received by Election Day."
+        },
+        {
+          "title": "Trump pardons Giuliani, other allies who sought to overturn 2020 election",
+          "url": "https://www.washingtonpost.com/politics/2025/11/10/trump-pardons-giuliani-election-fraud/",
+          "publishedAt": "Mon, 10 Nov 2025 18:57:07 +0000",
+          "description": "None of the more than 75 people listed have been charged with federal crimes, though several have been prosecuted in states."
+        },
+        {
+          "title": "U.S. strikes two more alleged drug boats, pushing death toll past 75",
+          "url": "https://www.washingtonpost.com/national-security/2025/11/10/us-drug-boat-strike-hegseth/",
+          "publishedAt": "Mon, 10 Nov 2025 17:48:23 +0000",
+          "description": "The attacks in the eastern Pacific Ocean, disclosed Monday by Defense Secretary Pete Hegseth, killed six people, he said."
+        },
+        {
+          "title": "The health care battle behind the shutdown roils North Carolina politics",
+          "url": "https://www.washingtonpost.com/politics/2025/11/09/shutdown-health-care-aca-subsidies-north-carolina/",
+          "publishedAt": "Mon, 10 Nov 2025 16:34:48 +0000",
+          "description": "The health care debate has become a “microcosm of the midterms” in the battleground state as rising premiums hit."
+        },
+        {
+          "title": "Appeals court denies Trump effort to halt full SNAP benefits for November",
+          "url": "https://www.washingtonpost.com/politics/2025/11/10/snap-payments-ruling-first-circuit/",
+          "publishedAt": "Mon, 10 Nov 2025 13:33:55 +0000",
+          "description": "Back-and-forth court rulings have led to confusion and frustration over SNAP subsidies that help 42 million recipients pay for groceries."
+        },
+        {
+          "title": "These are the Democrats who broke ranks to vote for the shutdown deal",
+          "url": "https://www.washingtonpost.com/politics/2025/11/10/shutdown-deal-democrats/",
+          "publishedAt": "Mon, 10 Nov 2025 12:08:33 +0000",
+          "description": "Sens. Dick Durbin, Tim Kaine and others supported a deal paving the way to end the shutdown. A final deal would need support from the House and president."
+        },
+        {
+          "title": "A Rastafarian goes to the Supreme Court after a prison shaved his dreadlocks",
+          "url": "https://www.washingtonpost.com/politics/2025/11/10/dreadlocks-rastafarian-landor-religious-liberty-supreme-court/",
+          "publishedAt": "Mon, 10 Nov 2025 10:00:33 +0000",
+          "description": "The question is not whether Damon Landor was mistreated but whether he can sue the individual prison officials and guards for damages."
+        },
+        {
+          "title": "More than 10,000 flights delayed in worst day of disruptions since shutdown",
+          "url": "https://www.washingtonpost.com/transportation/2025/11/09/flight-cancellations-delays-weekend-travel-shutdown/",
+          "publishedAt": "Mon, 10 Nov 2025 04:35:56 +0000",
+          "description": "More than 2,800 flights were canceled Sunday, while Transportation Secretary Sean P. Duffy said the shutdown’s impact on airports is “only going to get worse.”"
+        },
+        {
+          "title": "Late-night Senate deal opens path to ending shutdown but splits Democrats",
+          "url": "https://www.washingtonpost.com/politics/2025/11/09/shutdown-senate-proposal/",
+          "publishedAt": "Mon, 10 Nov 2025 03:50:28 +0000",
+          "description": "The deal that split Democrats doesn’t extend expiring ACA subsidies. If a bill passes the Senate, it needs the House to approve and President Donald Trump on board."
+        },
+        {
+          "title": "Trump administration orders states to pause paying full SNAP benefits",
+          "url": "https://www.washingtonpost.com/politics/2025/11/09/snap-benefits-states-usda-trump/",
+          "publishedAt": "Mon, 10 Nov 2025 02:51:37 +0000",
+          "description": "As the shutdown dragged on, USDA demanded that states “immediately undo” any steps they have taken to send full November payments to SNAP recipients."
+        },
+        {
+          "title": "Ten seconds in the Oval Office that overshadowed Trump’s drug-price win",
+          "url": "https://www.washingtonpost.com/politics/2025/11/09/oval-office-chaos-man-collapsing/",
+          "publishedAt": "Sun, 09 Nov 2025 22:28:17 +0000",
+          "description": "A press conference collapse has sparked days of memes and jokes. Not all are accurate."
+        }
+      ]
+    },
+    {
+      "source": "Bloomberg",
+      "url": "https://www.bloomberg.com/politics/rss.xml",
+      "items": []
+    }
+  ]
+}

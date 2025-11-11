@@ -46,7 +46,39 @@ function SourceCitations() {
           description: 'Real-time news articles about government shutdowns',
           license: 'Proprietary',
           type: 'news',
-          enabled: false
+          enabled: !!process.env.NEWSAPI_KEY && process.env.NEWSAPI_KEY !== 'your_newsapi_key_here'
+        },
+        {
+          name: 'WhiteHouse.gov',
+          url: 'https://www.whitehouse.gov/',
+          description: 'Official presidential statements and press releases',
+          license: 'Public Domain',
+          type: 'government',
+          enabled: true
+        },
+        {
+          name: 'Congress.gov',
+          url: 'https://www.congress.gov/',
+          description: 'Legislative text, bill status, and appropriations information',
+          license: 'Public Domain',
+          type: 'government',
+          enabled: true
+        },
+        {
+          name: 'CBO',
+          url: 'https://www.cbo.gov/',
+          description: 'Budget and economic analysis related to shutdown impacts',
+          license: 'Public Domain',
+          type: 'government',
+          enabled: true
+        },
+        {
+          name: 'OMB',
+          url: 'https://www.whitehouse.gov/omb/',
+          description: 'Guidance for federal agencies about appropriations and contingencies',
+          license: 'Public Domain',
+          type: 'government',
+          enabled: true
         }
       ])
       setLoading(false)

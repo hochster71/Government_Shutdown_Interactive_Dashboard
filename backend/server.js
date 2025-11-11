@@ -12,6 +12,9 @@ import pinoHttp from 'pino-http';
 import { fetchShutdowns } from './adapters/wiki.js';
 import { fetchNews, fetchTopHeadlines } from './adapters/newsapi.js';
 import { initUpdateScheduler } from './services/updateScheduler.js';
+import fs from 'fs/promises';
+import path from 'path';
+import * as cheerio from 'cheerio';
 
 // Load environment variables
 dotenv.config({ path: '../.env' });
@@ -265,6 +268,40 @@ app.get('/api/news', [
 
     const newsData = await fetchNews(apiKey, options);
     
+    // If NewsAPI returned no articles (key absent or empty), attempt RSS fallback
+    if (!newsData || !Array.isArray(newsData.articles) || newsData.articles.length === 0) {
+      try {
+        // Find latest RSS file in data/
+        const dataDir = path.join(process.cwd(), 'data');
+        const files = await fs.readdir(dataDir).catch(() => []);
+        const rssFiles = files.filter(f => f.startsWith('latest_rss_')).sort();
+        if (rssFiles.length > 0) {
+          const latest = rssFiles[rssFiles.length - 1];
+          const raw = await fs.readFile(path.join(dataDir, latest), 'utf8');
+          const parsed = JSON.parse(raw);
+          // Flatten articles and tag source
+          const articles = [];
+          for (const src of parsed.sources || []) {
+            for (const it of src.items || []) {
+              articles.push({
+                title: it.title,
+                description: it.description,
+                url: it.url,
+                source: src.source,
+                publishedAt: it.publishedAt
+              });
+            }
+          }
+
+          // Cache and return RSS articles
+          cache.set(cacheKey, { articles, totalResults: articles.length }, 1800);
+          return res.json({ articles, totalResults: articles.length, cached: false, timestamp: new Date().toISOString() });
+        }
+      } catch (err) {
+        console.warn('RSS fallback failed:', err.message || err);
+      }
+    }
+
     // Cache the result (30 minutes = 1800 seconds)
     cache.set(cacheKey, newsData, 1800);
 
@@ -342,6 +379,114 @@ app.get('/api/news/headlines', [
       message: isProduction ? 'An error occurred while fetching headlines' : error.message,
       articles: []
     });
+  }
+});
+
+/**
+ * GET /api/official
+ * Returns structured official notices parsed from saved snapshots in /data
+ * If snapshots are not available, returns an empty array for each source.
+ */
+app.get('/api/official', async (req, res) => {
+  try {
+    const dataDir = path.join(process.cwd(), 'data');
+
+    const sourcesToLoad = [
+      { name: 'WhiteHouse', prefix: 'whitehouse_search_', domain: 'whitehouse.gov' },
+      { name: 'Congress', prefix: 'congress_search_', domain: 'congress.gov' },
+      { name: 'GovInfo', prefix: 'govinfo_search_', domain: 'govinfo.gov' },
+      { name: 'CBO', prefix: 'cbo_search_', domain: 'cbo.gov' }
+    ];
+
+    const files = await fs.readdir(dataDir).catch(() => []);
+
+    const results = [];
+
+    for (const src of sourcesToLoad) {
+      // Find latest file matching prefix
+      const matched = files.filter(f => f.startsWith(src.prefix)).sort();
+      if (matched.length === 0) {
+        results.push({ source: src.name, items: [], file: null });
+        continue;
+      }
+
+      const latest = matched[matched.length - 1];
+      const raw = await fs.readFile(path.join(dataDir, latest), 'utf8').catch(() => '');
+      const $ = cheerio.load(raw || '');
+
+      const items = [];
+
+      // Generic extraction: look for links that contain the source domain and capture context
+      $('a').each((i, el) => {
+        try {
+          const href = $(el).attr('href') || '';
+          const text = $(el).text().trim();
+          if (!href || !text) return;
+
+          // Only consider links that reference the expected domain or are absolute paths
+          if (href.includes(src.domain) || href.startsWith('/')) {
+            // Build absolute URL when necessary
+            let url = href;
+            if (href.startsWith('/')) url = `https://${src.domain}${href}`;
+            if (!url.startsWith('http')) url = `https://${src.domain}/${href}`;
+
+            // Try to extract a nearby excerpt: nearest article or paragraph
+            const article = $(el).closest('article');
+            let excerpt = '';
+            if (article && article.length) {
+              excerpt = article.text().replace(/\s+/g, ' ').trim();
+            } else {
+              const parentText = $(el).parent().text() || '';
+              excerpt = parentText.replace(/\s+/g, ' ').trim();
+            }
+
+            items.push({ title: text, url, excerpt: excerpt.substring(0, 500) });
+          }
+        } catch (e) {
+          // ignore parsing errors for individual nodes
+        }
+      });
+
+      // Deduplicate by URL and limit
+      const deduped = [];
+      const seen = new Set();
+      for (const it of items) {
+        if (!seen.has(it.url)) {
+          seen.add(it.url);
+          deduped.push(it);
+        }
+        if (deduped.length >= 25) break;
+      }
+
+      results.push({ source: src.name, file: latest, items: deduped });
+    }
+
+    res.json({ results, timestamp: new Date().toISOString() });
+  } catch (error) {
+    logger.error({ error: error.message, stack: error.stack }, 'Error in /api/official');
+    res.status(500).json({ error: 'Failed to fetch official notices', message: error.message, results: [] });
+  }
+});
+
+/**
+ * GET /api/official/canonical
+ * Returns the latest canonical official feed (normalized)
+ */
+app.get('/api/official/canonical', async (req, res) => {
+  try {
+    const dataDir = path.join(process.cwd(), 'data');
+    const files = await fs.readdir(dataDir).catch(() => []);
+    const canonicalFiles = files.filter(f => f.startsWith('official_canonical_')).sort();
+    if (canonicalFiles.length === 0) {
+      return res.json({ items: [], timestamp: new Date().toISOString() });
+    }
+    const latest = canonicalFiles[canonicalFiles.length - 1];
+    const raw = await fs.readFile(path.join(dataDir, latest), 'utf8');
+    const parsed = JSON.parse(raw);
+    res.json({ items: parsed.items || [], parsed_at: parsed.parsed_at, file: latest, timestamp: new Date().toISOString() });
+  } catch (err) {
+    logger.error({ error: err.message, stack: err.stack }, 'Error in /api/official/canonical');
+    res.status(500).json({ error: 'Failed to load canonical feed', message: err.message, items: [] });
   }
 });
 
@@ -436,6 +581,80 @@ app.post('/api/impact/calc', postLimiter, [
 
     res.json(result);
   } catch (error) {
+    // Add extended authoritative sources for accurate, traceable reporting
+    const extendedSources = [
+      {
+        name: 'WhiteHouse.gov',
+        url: 'https://www.whitehouse.gov/',
+        description: 'Presidential statements, press releases, and official guidance',
+        license: 'Public Domain',
+        type: 'government'
+      },
+      {
+        name: 'Congress.gov',
+        url: 'https://www.congress.gov/',
+        description: 'Legislative text, bill status, committee reports (appropriations and continuing resolutions)',
+        license: 'Public Domain',
+        type: 'government'
+      },
+      {
+        name: 'Congressional Budget Office (CBO)',
+        url: 'https://www.cbo.gov/',
+        description: 'Budgetary and economic analysis relevant to shutdown impacts',
+        license: 'Public Domain',
+        type: 'government'
+      },
+      {
+        name: 'Office of Management and Budget (OMB)',
+        url: 'https://www.whitehouse.gov/omb/',
+        description: 'Guidance for federal agencies during appropriations gaps and contingency operations',
+        license: 'Public Domain',
+        type: 'government'
+      },
+      {
+        name: 'U.S. Department of Homeland Security (DHS)',
+        url: 'https://www.dhs.gov/',
+        description: 'Operational notices and guidance for DHS components',
+        license: 'Public Domain',
+        type: 'government'
+      },
+      {
+        name: 'U.S. Treasury',
+        url: 'https://home.treasury.gov/',
+        description: 'Financial guidance, payments, and debt-related notices',
+        license: 'Public Domain',
+        type: 'government'
+      },
+      {
+        name: 'Social Security Administration (SSA)',
+        url: 'https://www.ssa.gov/',
+        description: 'Service impact notices and guidance for beneficiaries',
+        license: 'Public Domain',
+        type: 'government'
+      },
+      {
+        name: 'U.S. Postal Service (USPS)',
+        url: 'https://about.usps.com/',
+        description: 'Operational guidance and notices affecting postal services',
+        license: 'Public Domain',
+        type: 'government'
+      },
+      {
+        name: 'National Park Service (NPS)',
+        url: 'https://www.nps.gov/',
+        description: 'Operational notices and park closure information',
+        license: 'Public Domain',
+        type: 'government'
+      }
+    ];
+
+    // Merge unique sources into the returned list (avoid duplicates)
+    const merged = [...sources];
+    extendedSources.forEach(ext => {
+      if (!merged.some(s => s.url === ext.url)) merged.push(ext);
+    });
+
+    res.json({ sources: merged, timestamp: new Date().toISOString() });
     console.error('Error in /api/impact/calc:', error);
     const message = NODE_ENV === 'production' 
       ? 'Failed to calculate impact'
