@@ -20,7 +20,7 @@ describe('Helmet options builder', () => {
   test('connectSrc includes allowed origins', () => {
     const opts = buildHelmetOptions(true, ['https://api.example.com', 'https://cdn.example.com']);
     const directives = opts.contentSecurityPolicy.directives;
-    // Should include self and the allowed origins
-    expect(directives.connectSrc).toEqual(expect.arrayContaining(["'self'", 'https:', 'https://api.example.com', 'https://cdn.example.com']));
+    // Should include self and the allowed origins (no wildcard https: for security)
+    expect(directives.connectSrc).toEqual(expect.arrayContaining(["'self'", 'https://api.example.com', 'https://cdn.example.com']));
   });
 });
