@@ -12,10 +12,13 @@
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "build:backend": "npm run build --workspace=backend",
-    "build:frontend": "npm run build --workspace=frontend",
-    "build": "npm run build:backend && npm run build:frontend",
-    "start": "npm run start --workspace=backend"
+  "build:backend": "npm run build --workspace=backend",
+  "build:frontend": "npm run build --workspace=frontend",
+  "build": "npm run build:backend && npm run build:frontend",
+  "test:backend": "npm run test --workspace=backend",
+  "lint:frontend": "npm run lint --workspace=frontend",
+  "test": "npm run test:backend && npm run lint:frontend && npm run build:frontend",
+  "start": "npm run start --workspace=backend"
   },
   "keywords": [
     "government",
