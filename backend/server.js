@@ -116,6 +116,15 @@ const limiter = rateLimit({
 
 app.use('/api/', limiter);
 
+// Rate limiting for static file serving (more lenient)
+const staticLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 100, // 100 requests per minute for static files
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true // Don't count successful requests
+});
+
 // Store scheduler instance for management
 let updateScheduler = null;
 
@@ -401,6 +410,27 @@ app.use('/static', express.static('public', {
   etag: true,
   lastModified: true
 }));
+
+// Serve frontend build (production mode)
+if (isProduction || process.env.SERVE_FRONTEND === 'true') {
+  app.use(express.static('public', {
+    maxAge: '1d',
+    etag: true
+  }));
+  
+  // Serve index.html for all non-API routes (SPA support) with rate limiting
+  app.get('*', staticLimiter, (req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api/') || req.path === '/health') {
+      return next();
+    }
+    res.sendFile('index.html', { root: 'public' }, (err) => {
+      if (err) {
+        next(); // Fall through to 404 handler
+      }
+    });
+  });
+}
 
 // 404 handler
 app.use((req, res) => {
