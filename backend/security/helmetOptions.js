@@ -5,7 +5,7 @@ export function buildHelmetOptions(isProduction, allowedOrigins = []) {
     : ["'self'", "'unsafe-inline'"]; // allow unsafe-inline in dev for tooling like Vite
 
   // connect-src should allow self and any configured allowed origins in production
-  const connectSrc = ["'self'", 'https:'];
+  const connectSrc = ["'self'"];
   if (Array.isArray(allowedOrigins) && allowedOrigins.length) {
     // Only allow origins (strip paths)
     allowedOrigins.forEach((o) => {
