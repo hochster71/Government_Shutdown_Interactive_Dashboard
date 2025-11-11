@@ -37,3 +37,6 @@ coverage/
 
 # Research results
 backend/research-results.json
+
+# Screenshots
+screenshots/

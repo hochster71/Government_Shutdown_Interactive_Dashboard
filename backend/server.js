@@ -402,6 +402,27 @@ app.use('/static', express.static('public', {
   lastModified: true
 }));
 
+// Serve frontend build (production mode)
+if (isProduction || process.env.SERVE_FRONTEND === 'true') {
+  app.use(express.static('public', {
+    maxAge: '1d',
+    etag: true
+  }));
+  
+  // Serve index.html for all non-API routes (SPA support)
+  app.get('*', (req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api/') || req.path === '/health') {
+      return next();
+    }
+    res.sendFile('index.html', { root: 'public' }, (err) => {
+      if (err) {
+        next(); // Fall through to 404 handler
+      }
+    });
+  });
+}
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({

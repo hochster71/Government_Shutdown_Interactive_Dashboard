@@ -10,9 +10,12 @@ An interactive, dark-themed dashboard for visualizing and analyzing US Governmen
 - 🔄 **Sankey Diagram**: Explore relationships between causes, affected agencies, and resolutions
 - 💰 **Impact Calculator**: Calculate and visualize economic impacts of shutdowns
 - 📰 **Live News Feed**: Real-time news articles related to government shutdowns
+- 🔍 **Data Transparency**: Clear indicators showing all data sources and their independence
 - ⏰ **Automated Updates**: Data refreshes every 6 hours to ensure latest information
+- 🔬 **Research Script**: Automated data collection and analysis from multiple sources
 - 🎨 **Dark Theme**: Professional dark theme optimized for data visualization
 - 📱 **Responsive Design**: Works seamlessly on desktop and mobile devices
+- ✅ **Independent Sources**: 100% independent from White House - uses Wikipedia, NewsAPI, and public records
 
 ## Tech Stack
 
@@ -91,6 +94,29 @@ npm run dev:frontend
 ```
 
 Then open http://localhost:5173 in your browser.
+
+### Research Script
+
+Run the data research script to analyze shutdown information:
+```bash
+# Run basic research
+cd backend && npm run research
+
+# Save results to JSON file
+npm run research:save
+
+# Enable verbose output with detailed article listings
+npm run research:verbose
+```
+
+The research script provides:
+- Historical shutdown analysis
+- News sentiment analysis
+- Detection of ongoing shutdowns
+- Media coverage metrics
+- Independent data source verification
+
+See [backend/scripts/README.md](backend/scripts/README.md) for more details.
 
 ### Production Build
 

@@ -734,3 +734,17 @@ textarea:focus-visible {
     display: none;
   }
 }
+
+/* Slide down animation for expandable sections */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+    transform: translateY(0);
+  }
+}

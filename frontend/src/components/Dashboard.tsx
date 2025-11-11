@@ -3,6 +3,7 @@ import Timeline from './Timeline'
 import SankeyDiagram from './SankeyDiagram'
 import ImpactCalculator from './ImpactCalculator'
 import SourceCitations from './SourceCitations'
+import DataTransparency from './DataTransparency'
 import { fetchShutdowns, fetchNews, sanitizeString } from '../utils/api'
 import { logger } from '../utils/logger'
 
@@ -95,6 +96,9 @@ function Dashboard() {
 
   return (
     <div className="dashboard fade-in">
+      {/* Data Transparency Indicator */}
+      <DataTransparency shutdownCount={shutdowns.length} newsCount={news.length} />
+
       {/* Statistics Cards - Enhanced */}
       <div className="grid grid-cols-3" style={{ marginBottom: 'var(--spacing-xl)' }}>
         <div className="card stat-card glow-on-hover">
