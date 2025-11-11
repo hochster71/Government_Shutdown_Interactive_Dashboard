@@ -28,8 +28,8 @@ function OfficialNotices() {
       const data = await apiGet<{ results: SourceResult[] }>('/api/official')
       setResults(data.results || [])
       setLoading(false)
-    } catch (error: any) {
-      logger.error('Failed to load official notices', error)
+    } catch (error: unknown) {
+      logger.error('Failed to load official notices', String(error))
       setResults([])
       setLoading(false)
     }

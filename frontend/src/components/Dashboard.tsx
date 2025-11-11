@@ -31,11 +31,19 @@ interface NewsArticle {
   source: string
   publishedAt: string
 }
+interface OfficialItem {
+  id?: string
+  title: string
+  url: string
+  excerpt?: string
+  publishedAt?: string
+  source: string
+}
 
 function Dashboard() {
   const [shutdowns, setShutdowns] = useState<ShutdownData[]>([])
   const [news, setNews] = useState<NewsArticle[]>([])
-  const [canonical, setCanonical] = useState<any[]>([])
+  const [canonical, setCanonical] = useState<OfficialItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'timeline' | 'sankey' | 'calculator'>('timeline')
@@ -57,23 +65,23 @@ function Dashboard() {
       try {
         const newsData = await apiGet<{ articles: NewsArticle[] }>('/api/news', { pageSize: '10' })
         setNews(newsData.articles || [])
-      } catch (newsError: any) {
-        logger.warn('News fetch failed (optional):', newsError)
+      } catch (newsError: unknown) {
+        logger.warn('News fetch failed (optional):', String(newsError))
       }
 
       // Fetch canonical official feed (optional)
       try {
-        const canonicalData = await apiGet<{ items: any[] }>('/api/official/canonical')
+        const canonicalData = await apiGet<{ items: OfficialItem[] }>('/api/official/canonical')
         setCanonical(canonicalData.items || [])
-      } catch (canonicalError: any) {
-        logger.warn('Failed to load canonical official feed:', canonicalError)
+      } catch (canonicalError: unknown) {
+        logger.warn('Failed to load canonical official feed:', String(canonicalError))
       }
 
       logger.info('Dashboard data loaded successfully')
       setLoading(false)
-    } catch (err: any) {
-      logger.error('Error fetching data:', err)
-  setError((err && (err.message || String(err))) || 'Failed to load dashboard data. Please try again.')
+    } catch (err: unknown) {
+      logger.error('Error fetching data:', String(err))
+      setError(err instanceof Error ? err.message : String(err) || 'Failed to load dashboard data. Please try again.')
       setLoading(false)
     }
   }

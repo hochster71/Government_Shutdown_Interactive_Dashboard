@@ -16,9 +16,17 @@ interface ShutdownData {
   economicImpact?: string
 }
 
+interface CanonicalItem {
+  source: string
+  title: string
+  url: string
+  excerpt?: string
+  publishedAt?: string
+}
+
 interface TimelineProps {
   shutdowns: ShutdownData[]
-  canonical?: Array<{ source: string, title: string, url: string, excerpt?: string, publishedAt?: string }>
+  canonical?: CanonicalItem[]
 }
 
 function Timeline({ shutdowns, canonical = [] }: TimelineProps) {
@@ -175,8 +183,8 @@ function Timeline({ shutdowns, canonical = [] }: TimelineProps) {
     // After rendering, add related official notices links in the Details list
     // We'll render this client-side by manipulating the Shutdown Details DOM below
     // Build a simple map of canonical items by year for quick lookup
-    const canonicalByYear = {} as Record<string, Array<any>>
-    canonical.forEach((it: any) => {
+    const canonicalByYear = {} as Record<string, CanonicalItem[]>
+    canonical.forEach((it: CanonicalItem) => {
       try {
         const text = (it.title || '') + ' ' + (it.excerpt || '')
         const yearMatch = text.match(/(19|20)\d{2}/)
@@ -185,7 +193,7 @@ function Timeline({ shutdowns, canonical = [] }: TimelineProps) {
           canonicalByYear[y] = canonicalByYear[y] || []
           canonicalByYear[y].push(it)
         }
-      } catch (e) {}
+      } catch (e) { console.debug(e) }
     })
 
     // For each shutdown detail card, append related links if available
@@ -204,17 +212,17 @@ function Timeline({ shutdowns, canonical = [] }: TimelineProps) {
         const container = node.append('div').style('margin-top', '8px')
         container.append('div').style('font-size', '0.85rem').style('color', '#cbd5e1').text('Related official notices:')
         const list = container.append('ul').style('margin', '6px 0 0 16px')
-        items.slice(0,3).forEach((it: any) => {
+        items.slice(0,3).forEach((it: CanonicalItem) => {
           list.append('li').html(`<a href="${it.url}" target="_blank" style="color:#7dd3fc">${it.title}</a>`)
         })
-      } catch (e) {}
+      } catch (e) { console.debug(e) }
     })
 
     // Cleanup tooltip on unmount
     return () => {
       tooltip.remove()
     }
-  }, [shutdowns])
+  }, [shutdowns, canonical])
 
   if (shutdowns.length === 0) {
     return (

@@ -162,7 +162,7 @@ function ImpactCalculator() {
 
       <button
         className="btn btn-primary"
-        onClick={handleCalculate}
+        onClick={calculateImpact}
         disabled={loading}
         style={{ width: '100%', padding: 'var(--spacing-md)' }}
       >
@@ -296,7 +296,7 @@ function ImpactCalculator() {
               <strong>Lost Productivity:</strong> Permanent economic losses that cannot be recovered even after the shutdown ends.
             </p>
             <p style={{ fontSize: '0.875rem', marginBottom: 0 }}>
-              <strong>GDP Impact:</strong> The shutdown's effect on the nation's Gross Domestic Product as a percentage.
+              <strong>GDP Impact:</strong> The shutdown&apos;s effect on the nation&apos;s Gross Domestic Product as a percentage.
             </p>
           </div>
         </div>

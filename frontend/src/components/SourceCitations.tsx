@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { apiGet } from '../utils/api'
+import { logger } from '../utils/logger'
 
 /**
  * Source Citations Component
@@ -28,8 +29,8 @@ function SourceCitations() {
       const data = await apiGet<{ sources: Source[] }>('/api/sources')
       setSources(data.sources || [])
       setLoading(false)
-    } catch (error: any) {
-      logger.error('Error fetching sources:', error)
+    } catch (error: unknown) {
+      logger.error('Error fetching sources:', String(error))
       // Use fallback data
       setSources([
         {
