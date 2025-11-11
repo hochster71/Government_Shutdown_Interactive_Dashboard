@@ -116,6 +116,15 @@ const limiter = rateLimit({
 
 app.use('/api/', limiter);
 
+// Rate limiting for static file serving (more lenient)
+const staticLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 100, // 100 requests per minute for static files
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true // Don't count successful requests
+});
+
 // Store scheduler instance for management
 let updateScheduler = null;
 
@@ -409,8 +418,8 @@ if (isProduction || process.env.SERVE_FRONTEND === 'true') {
     etag: true
   }));
   
-  // Serve index.html for all non-API routes (SPA support)
-  app.get('*', (req, res, next) => {
+  // Serve index.html for all non-API routes (SPA support) with rate limiting
+  app.get('*', staticLimiter, (req, res, next) => {
     // Skip API routes
     if (req.path.startsWith('/api/') || req.path === '/health') {
       return next();
