@@ -34,3 +34,6 @@ backend/server.js.backup
 # Test coverage
 coverage/
 .nyc_output/
+
+# Research results
+backend/research-results.json
