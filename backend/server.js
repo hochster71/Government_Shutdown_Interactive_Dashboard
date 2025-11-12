@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { body, validationResult } from 'express-validator';
+import { body, query, validationResult } from 'express-validator';
 import NodeCache from 'node-cache';
 import dotenv from 'dotenv';
 import pino from 'pino';
@@ -48,22 +48,27 @@ if (isProduction && !process.env.ALLOWED_ORIGIN) {
 const cache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
 
 // Security Headers with Helmet
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline needed for Vite in dev
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-    },
-  },
-  crossOriginEmbedderPolicy: false, // Allow embedding for development
-}));
+// Helmet: enable strict CSP in production, but relax in development for tooling (Vite)
+if (isProduction) {
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+      },
+    }
+  }));
+} else {
+  // In development disable CSP to allow HMR and tooling; keep other protections
+  app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+}
 
 // HTTP Request Logging
 app.use(pinoHttp({ logger }));
@@ -204,10 +209,10 @@ app.get('/api/shutdowns', async (req, res) => {
  * Query params: query, pageSize, sortBy
  */
 app.get('/api/news', [
-  // Input validation
-  body('query').optional().isString().trim().isLength({ max: 500 }),
-  body('pageSize').optional().isInt({ min: 1, max: 100 }),
-  body('sortBy').optional().isIn(['publishedAt', 'relevancy', 'popularity'])
+  // Input validation (query parameters for GET requests)
+  query('query').optional().isString().trim().isLength({ max: 500 }),
+  query('pageSize').optional().isInt({ min: 1, max: 100 }),
+  query('sortBy').optional().isIn(['publishedAt', 'relevancy', 'popularity'])
 ], async (req, res) => {
   // Check validation results
   const errors = validationResult(req);
@@ -235,7 +240,7 @@ app.get('/api/news', [
     // Fetch fresh data
     const options = {
       query: req.query.query,
-      pageSize: parseInt(req.query.pageSize) || 20,
+      pageSize: Number.parseInt(req.query.pageSize || '0', 10) || 20,
       sortBy: req.query.sortBy || 'publishedAt'
     };
 
@@ -282,7 +287,7 @@ app.get('/api/news/headlines', async (req, res) => {
     const options = {
       category: req.query.category || 'politics',
       country: req.query.country || 'us',
-      pageSize: parseInt(req.query.pageSize) || 10
+      pageSize: Number.parseInt(req.query.pageSize || '0', 10) || 10
     };
 
     const newsData = await fetchTopHeadlines(apiKey, options);
@@ -455,35 +460,20 @@ process.on('SIGINT', () => {
 let server;
 if (process.env.NODE_ENV !== 'test') {
   server = app.listen(PORT, () => {
-    logger.info({
-      port: PORT,
-      env: NODE_ENV,
-      corsOrigin: ALLOWED_ORIGIN,
-      newsApiConfigured: !!process.env.NEWSAPI_KEY
-    }, 'Government Shutdown Dashboard API Server started');
-    
-    console.log(`✅ Government Shutdown Dashboard API Server`);
-    console.log(`🚀 Running on http://localhost:${PORT}`);
-    console.log(`📊 CORS enabled for: ${ALLOWED_ORIGIN}`);
-    console.log(`🔑 NewsAPI: ${process.env.NEWSAPI_KEY ? 'Configured ✓' : 'Not configured (optional)'}`);
-    console.log(`🔒 Security: Helmet enabled with CSP`);
-    console.log(`📝 Logging: ${logLevel} level`);
-    console.log(`\n📚 Available endpoints:`);
-    console.log(`   GET  /health`);
-    console.log(`   GET  /api/sources`);
-    console.log(`   GET  /api/shutdowns`);
-    console.log(`   GET  /api/news`);
-    console.log(`   GET  /api/news/headlines`);
-    console.log(`   GET  /api/govinfo/:type`);
-    console.log(`   POST /api/impact/calc`);
-    
+    logger.info({ port: PORT, env: NODE_ENV, corsOrigin: ALLOWED_ORIGIN }, 'Government Shutdown Dashboard API Server started');
+
+    logger.info('Server listening', `http://localhost:${PORT}`);
+    logger.info('CORS origin', ALLOWED_ORIGIN);
+    logger.info('NewsAPI configured', !!process.env.NEWSAPI_KEY);
+    logger.info('Security: Helmet enabled');
+    logger.info('Logging level', logLevel);
+
     // Initialize automated update scheduler after server starts
     try {
       updateScheduler = initUpdateScheduler(cache, logger, process.env.NEWSAPI_KEY);
-      console.log(`\n⏰ Automated updates: Every 6 hours (ET)`);
+      logger.info('Automated updates scheduled every 6 hours (ET)');
     } catch (error) {
       logger.error({ error: error.message }, 'Failed to initialize update scheduler');
-      console.error(`⚠️  Warning: Update scheduler failed to initialize`);
     }
   });
 }

@@ -18,7 +18,7 @@ class Logger {
 
   debug(...args: any[]) {
     if (this.shouldLog('debug')) {
-      console.log('[DEBUG]', ...args);
+      console.debug('[DEBUG]', ...args);
     }
   }
 
