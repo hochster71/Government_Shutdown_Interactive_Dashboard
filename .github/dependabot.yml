@@ -1,14 +1,48 @@
 version: 2
 updates:
+  # Root workspace - detects workspace-level changes
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 10
+      day: "monday"
+    open-pull-requests-limit: 6
     commit-message:
       prefix: "deps"
-    allow:
-      - dependency-type: "direct"
-      - dependency-type: "indirect"
     labels:
       - "dependencies"
+    reviewers:
+      - "hochster71"
+
+  # Backend-specific updates (focus on backend package changes)
+  - package-ecosystem: "npm"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    open-pull-requests-limit: 6
+    commit-message:
+      prefix: "deps(backend)"
+    labels:
+      - "dependencies"
+      - "backend"
+    reviewers:
+      - "hochster71"
+
+  # Frontend-specific updates
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    open-pull-requests-limit: 6
+    commit-message:
+      prefix: "deps(frontend)"
+    labels:
+      - "dependencies"
+      - "frontend"
+    reviewers:
+      - "hochster71"
+
+# Optional: group minor/patch updates into single PRs (depends on repo size)
+versioning-strategy: "increase"
