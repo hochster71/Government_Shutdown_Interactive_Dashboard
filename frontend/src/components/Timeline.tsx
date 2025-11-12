@@ -38,6 +38,8 @@ function Timeline({ shutdowns }: TimelineProps) {
     const svg = d3.select(svgRef.current)
       .attr('width', width)
       .attr('height', height)
+      .attr('role', 'img')
+      .attr('aria-label', 'Timeline visualization of US government shutdowns showing duration and timing')
 
     const g = svg.append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`)
@@ -145,13 +147,27 @@ function Timeline({ shutdowns }: TimelineProps) {
           .duration(200)
           .style('opacity', 1)
 
-        tooltip.html(`
-          <strong>${d.date}</strong><br/>
-          Duration: ${d.duration}<br/>
-          President: ${d.president}<br/>
-          ${d.economicImpact ? `Impact: ${d.economicImpact}<br/>` : ''}
-          ${d.description.substring(0, 100)}...
-        `)
+        // Escape and sanitize all text content
+        const escapeHtml = (text: string) => {
+          const div = document.createElement('div')
+          div.textContent = text
+          return div.innerHTML
+        }
+
+        // Build tooltip with escaped text only
+        const tooltipLines = [
+          `Date: ${escapeHtml(d.date)}`,
+          `Duration: ${escapeHtml(d.duration)}`,
+          `President: ${escapeHtml(d.president)}`,
+        ]
+        
+        if (d.economicImpact) {
+          tooltipLines.push(`Impact: ${escapeHtml(d.economicImpact)}`)
+        }
+        
+        tooltipLines.push(escapeHtml(d.description.substring(0, 100)) + '...')
+
+        tooltip.html(tooltipLines.join('<br/>'))
           .style('left', (event.pageX + 15) + 'px')
           .style('top', (event.pageY - 15) + 'px')
       })

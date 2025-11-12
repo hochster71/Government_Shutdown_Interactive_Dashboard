@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { body, validationResult } from 'express-validator';
+import { body, query, validationResult } from 'express-validator';
 import NodeCache from 'node-cache';
 import dotenv from 'dotenv';
 import pino from 'pino';
@@ -35,17 +35,18 @@ const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const isProduction = NODE_ENV === 'production';
 
-// CORS Configuration
-const ALLOWED_ORIGIN = isProduction 
-  ? process.env.ALLOWED_ORIGIN 
-  : (process.env.ALLOWED_ORIGIN || 'http://localhost:5173');
+// CORS Configuration - Support comma-separated whitelist
+const CORS_ALLOWED_ORIGINS = process.env.CORS_ALLOWED_ORIGINS 
+  ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : (isProduction ? [] : ['http://localhost:5173', 'http://localhost:5174']);
 
-if (isProduction && !process.env.ALLOWED_ORIGIN) {
-  logger.warn('⚠️  ALLOWED_ORIGIN not set in production. CORS will be restrictive.');
+if (isProduction && CORS_ALLOWED_ORIGINS.length === 0) {
+  logger.warn('⚠️  CORS_ALLOWED_ORIGINS not set in production. CORS will be restrictive.');
 }
 
-// Initialize cache (TTL: 1 hour = 3600 seconds)
-const cache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
+// Initialize cache with configurable TTL (default: 1 hour = 3600 seconds)
+const SHUTDOWNS_CACHE_TTL_SECONDS = parseInt(process.env.SHUTDOWNS_CACHE_TTL_SECONDS) || 3600;
+const cache = new NodeCache({ stdTTL: SHUTDOWNS_CACHE_TTL_SECONDS, checkperiod: 600 });
 
 // Security Headers with Helmet
 app.use(helmet({
@@ -75,16 +76,22 @@ app.use(cors({
     if (!origin) return callback(null, true);
     
     if (isProduction) {
-      // In production, only allow configured origin
-      if (origin === ALLOWED_ORIGIN) {
+      // In production, only allow configured origins from whitelist
+      if (CORS_ALLOWED_ORIGINS.length === 0) {
+        // If no origins configured, reject CORS in production
+        logger.warn({ origin }, 'CORS origin rejected - no allowed origins configured');
+        callback(new Error('Not allowed by CORS'));
+      } else if (CORS_ALLOWED_ORIGINS.includes(origin)) {
         callback(null, true);
       } else {
-        logger.warn({ origin, allowed: ALLOWED_ORIGIN }, 'CORS origin rejected');
+        logger.warn({ origin, allowed: CORS_ALLOWED_ORIGINS }, 'CORS origin rejected');
         callback(new Error('Not allowed by CORS'));
       }
     } else {
-      // In development, allow localhost origins
-      if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+      // In development, allow configured origins or localhost
+      if (CORS_ALLOWED_ORIGINS.includes(origin) || 
+          origin.startsWith('http://localhost') || 
+          origin.startsWith('http://127.0.0.1')) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
@@ -204,10 +211,10 @@ app.get('/api/shutdowns', async (req, res) => {
  * Query params: query, pageSize, sortBy
  */
 app.get('/api/news', [
-  // Input validation
-  body('query').optional().isString().trim().isLength({ max: 500 }),
-  body('pageSize').optional().isInt({ min: 1, max: 100 }),
-  body('sortBy').optional().isIn(['publishedAt', 'relevancy', 'popularity'])
+  // Input validation using query() for GET requests
+  query('query').optional().isString().trim().isLength({ max: 500 }),
+  query('pageSize').optional().isInt({ min: 1, max: 100 }),
+  query('sortBy').optional().isIn(['publishedAt', 'relevancy', 'popularity'])
 ], async (req, res) => {
   // Check validation results
   const errors = validationResult(req);
@@ -458,16 +465,17 @@ if (process.env.NODE_ENV !== 'test') {
     logger.info({
       port: PORT,
       env: NODE_ENV,
-      corsOrigin: ALLOWED_ORIGIN,
+      corsOrigins: CORS_ALLOWED_ORIGINS,
       newsApiConfigured: !!process.env.NEWSAPI_KEY
     }, 'Government Shutdown Dashboard API Server started');
     
     console.log(`✅ Government Shutdown Dashboard API Server`);
     console.log(`🚀 Running on http://localhost:${PORT}`);
-    console.log(`📊 CORS enabled for: ${ALLOWED_ORIGIN}`);
+    console.log(`📊 CORS enabled for: ${CORS_ALLOWED_ORIGINS.join(', ') || 'None (restrictive)'}`);
     console.log(`🔑 NewsAPI: ${process.env.NEWSAPI_KEY ? 'Configured ✓' : 'Not configured (optional)'}`);
     console.log(`🔒 Security: Helmet enabled with CSP`);
     console.log(`📝 Logging: ${logLevel} level`);
+    console.log(`⏱️  Cache TTL: ${SHUTDOWNS_CACHE_TTL_SECONDS}s`);
     console.log(`\n📚 Available endpoints:`);
     console.log(`   GET  /health`);
     console.log(`   GET  /api/sources`);
