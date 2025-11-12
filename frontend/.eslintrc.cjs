@@ -25,8 +25,8 @@ module.exports = {
   rules: {
     'react/react-in-jsx-scope': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
-    // Relax rules for incremental migration
-    '@typescript-eslint/no-explicit-any': 'off',
-    'react/no-unescaped-entities': 'off'
+    // Re-enable stricter rules — address any errors in follow-up commits
+    '@typescript-eslint/no-explicit-any': 'error',
+    'react/no-unescaped-entities': 'error'
   }
 };
