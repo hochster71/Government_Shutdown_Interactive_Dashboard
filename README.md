@@ -170,11 +170,12 @@ The scheduler runs in the background and logs all update activity for monitoring
 
 ### Environment Variables
 
-- `NEWSAPI_KEY` - API key for NewsAPI (optional, but recommended)
+- `NEWSAPI_KEY` - API key for NewsAPI (optional, but recommended) - **Never commit this to version control**
 - `PORT` - Backend server port (default: 3001)
 - `NODE_ENV` - Environment mode (development/production)
 - `LOG_LEVEL` - Logging level: debug, info, warn, error (default: debug in dev, info in prod)
-- `ALLOWED_ORIGIN` - CORS allowed origin (required in production, default: http://localhost:5173 in dev)
+- `CORS_ALLOWED_ORIGINS` - Comma-separated list of allowed CORS origins (required in production, default: http://localhost:5173,http://localhost:5174 in dev)
+- `SHUTDOWNS_CACHE_TTL_SECONDS` - Cache TTL for shutdown data in seconds (default: 3600)
 
 See `.env.example` for all available options.
 
@@ -226,18 +227,21 @@ The workflow runs on pushes to `main` and `feature/*` branches, and on pull requ
 
 ## Security Best Practices
 
-This application implements several security best practices:
+This application implements comprehensive security best practices:
 
-1. **Input Validation**: All user inputs are validated on both client and server
-2. **Output Sanitization**: DOMPurify sanitizes content before rendering
-3. **CSP Headers**: Content Security Policy prevents XSS attacks
-4. **Rate Limiting**: API endpoints are rate-limited to prevent abuse
-5. **Request Timeouts**: All external requests have timeouts to prevent hanging
-6. **CORS Hardening**: Production requires explicit origin configuration
-7. **Error Handling**: Stack traces are never exposed in production
+1. **Input Validation**: All user inputs are validated on both client and server using express-validator with strict type checking and length limits
+2. **Output Sanitization**: DOMPurify sanitizes content before rendering; all dynamic content is properly escaped
+3. **CSP Headers**: Content Security Policy prevents XSS attacks and restricts resource loading
+4. **Rate Limiting**: API endpoints are rate-limited (100 requests per 15 minutes) to prevent abuse
+5. **Request Timeouts**: All external requests have 10-second timeouts with AbortController to prevent hanging
+6. **CORS Hardening**: Production requires explicit whitelist configuration via CORS_ALLOWED_ORIGINS environment variable
+7. **Error Handling**: Stack traces are never exposed in production; all errors logged securely
 8. **Structured Logging**: Pino logger provides audit trails without leaking sensitive data
-9. **Dependency Security**: Regular audits via `npm audit`
+9. **Dependency Security**: Regular audits via `npm audit` and automated security checks in CI/CD
 10. **Native Fetch**: Uses Node 18+ native fetch instead of third-party HTTP clients
+11. **Content-Type Validation**: HTTP responses validated to ensure expected content types
+12. **API Key Protection**: All sensitive credentials stored in environment variables, never committed to version control
+13. **Content Sanitization**: All scraped content sanitized to remove script tags, event handlers, and malicious code
 
 ## Data Sources
 

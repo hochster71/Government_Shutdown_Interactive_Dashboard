@@ -125,6 +125,12 @@ async function fetchShutdownsWithRetry(retryCount = 0) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
+    // Validate content-type to ensure we're getting HTML
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('text/html')) {
+      throw new Error(`Invalid content-type: ${contentType}. Expected text/html`);
+    }
+
     const html = await response.text();
     const $ = cheerio.load(html);
     const shutdowns = [];
