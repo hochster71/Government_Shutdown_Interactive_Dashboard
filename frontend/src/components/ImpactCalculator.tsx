@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import Plot from 'react-plotly.js'
 import { calculateImpact, sanitizeString } from '../utils/api'
 import { logger } from '../utils/logger'
 
 /**
- * Impact Calculator Component
- * Calculate economic impact of government shutdowns
+ * Impact Calculator Component (Enhanced with Plotly)
+ * Calculate economic impact of government shutdowns with advanced visualizations
+ * Features gauge charts, bar charts, and interactive metrics
  */
 
 interface ImpactResult {
@@ -171,84 +173,205 @@ function ImpactCalculator() {
 
       {result && (
         <div style={{ marginTop: 'var(--spacing-xl)' }}>
-          <h4 style={{ marginBottom: 'var(--spacing-md)' }}>Impact Analysis Results</h4>
+          <h4 style={{ marginBottom: 'var(--spacing-md)' }}>💰 Impact Analysis Results</h4>
 
+          {/* Gauge Charts */}
           <div className="grid grid-cols-2" style={{ marginBottom: 'var(--spacing-lg)' }}>
-            <div className="card">
-              <div className="card-body text-center">
-                <h3 style={{
-                  fontSize: '2rem',
-                  color: 'var(--color-accent-blue)',
-                  marginBottom: 'var(--spacing-sm)'
-                }}>
-                  {result.formatted.directImpact}
-                </h3>
-                <p style={{
-                  fontSize: '0.875rem',
-                  color: 'var(--color-text-muted)',
-                  marginBottom: 0
-                }}>
-                  Direct Impact
-                </p>
-              </div>
+            <div style={{ 
+              background: 'var(--color-bg-tertiary)', 
+              borderRadius: 'var(--radius-md)',
+              padding: 'var(--spacing-sm)'
+            }}>
+              <Plot
+                data={[{
+                  type: 'indicator' as const,
+                  mode: 'gauge+number+delta' as const,
+                  value: result.impacts.directImpact / 1e9,
+                  title: { text: 'Direct Impact', font: { size: 16, color: '#e4e6eb' } },
+                  delta: { reference: 5 },
+                  number: { prefix: '$', suffix: 'B', font: { size: 24 } },
+                  gauge: {
+                    axis: { range: [null, 50], tickcolor: '#b8bcc8' },
+                    bar: { color: '#4a9eff' },
+                    bgcolor: '#0f1419',
+                    borderwidth: 2,
+                    bordercolor: '#2d3748',
+                    steps: [
+                      { range: [0, 10], color: 'rgba(74, 158, 255, 0.2)' },
+                      { range: [10, 30], color: 'rgba(74, 158, 255, 0.3)' },
+                      { range: [30, 50], color: 'rgba(74, 158, 255, 0.4)' }
+                    ],
+                    threshold: {
+                      line: { color: '#ec4899', width: 4 },
+                      thickness: 0.75,
+                      value: 40
+                    }
+                  }
+                }]}
+                layout={{
+                  paper_bgcolor: '#1e2530',
+                  plot_bgcolor: '#1e2530',
+                  font: { color: '#e4e6eb' },
+                  height: 250,
+                  margin: { t: 50, b: 20, l: 20, r: 20 }
+                }}
+                config={{ displayModeBar: false, responsive: true }}
+                style={{ width: '100%', height: '100%' }}
+              />
             </div>
 
-            <div className="card">
-              <div className="card-body text-center">
-                <h3 style={{
-                  fontSize: '2rem',
-                  color: 'var(--color-accent-red)',
-                  marginBottom: 'var(--spacing-sm)'
-                }}>
-                  {result.formatted.totalEconomicImpact}
-                </h3>
-                <p style={{
-                  fontSize: '0.875rem',
-                  color: 'var(--color-text-muted)',
-                  marginBottom: 0
-                }}>
-                  Total Economic Impact
-                </p>
-              </div>
+            <div style={{ 
+              background: 'var(--color-bg-tertiary)', 
+              borderRadius: 'var(--radius-md)',
+              padding: 'var(--spacing-sm)'
+            }}>
+              <Plot
+                data={[{
+                  type: 'indicator' as const,
+                  mode: 'gauge+number+delta' as const,
+                  value: result.impacts.totalEconomicImpact / 1e9,
+                  title: { text: 'Total Economic Impact', font: { size: 16, color: '#e4e6eb' } },
+                  delta: { reference: 10 },
+                  number: { prefix: '$', suffix: 'B', font: { size: 24 } },
+                  gauge: {
+                    axis: { range: [null, 100], tickcolor: '#b8bcc8' },
+                    bar: { color: '#ec4899' },
+                    bgcolor: '#0f1419',
+                    borderwidth: 2,
+                    bordercolor: '#2d3748',
+                    steps: [
+                      { range: [0, 30], color: 'rgba(236, 72, 153, 0.2)' },
+                      { range: [30, 60], color: 'rgba(236, 72, 153, 0.3)' },
+                      { range: [60, 100], color: 'rgba(236, 72, 153, 0.4)' }
+                    ],
+                    threshold: {
+                      line: { color: '#fbbf24', width: 4 },
+                      thickness: 0.75,
+                      value: 80
+                    }
+                  }
+                }]}
+                layout={{
+                  paper_bgcolor: '#1e2530',
+                  plot_bgcolor: '#1e2530',
+                  font: { color: '#e4e6eb' },
+                  height: 250,
+                  margin: { t: 50, b: 20, l: 20, r: 20 }
+                }}
+                config={{ displayModeBar: false, responsive: true }}
+                style={{ width: '100%', height: '100%' }}
+              />
             </div>
+          </div>
 
-            <div className="card">
-              <div className="card-body text-center">
-                <h3 style={{
-                  fontSize: '2rem',
-                  color: 'var(--color-accent-yellow)',
-                  marginBottom: 'var(--spacing-sm)'
-                }}>
-                  {result.formatted.lostProductivity}
-                </h3>
-                <p style={{
-                  fontSize: '0.875rem',
-                  color: 'var(--color-text-muted)',
-                  marginBottom: 0
-                }}>
-                  Lost Productivity
-                </p>
-              </div>
-            </div>
+          {/* Bar Chart Breakdown */}
+          <div style={{ 
+            background: 'var(--color-bg-tertiary)', 
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--spacing-sm)',
+            marginBottom: 'var(--spacing-lg)'
+          }}>
+            <Plot
+              data={[{
+                type: 'bar',
+                x: ['Direct Impact', 'Lost Productivity', 'Total Economic Impact'],
+                y: [
+                  result.impacts.directImpact / 1e9,
+                  result.impacts.lostProductivity / 1e9,
+                  result.impacts.totalEconomicImpact / 1e9
+                ],
+                marker: {
+                  color: ['#4a9eff', '#fbbf24', '#ec4899'],
+                  line: { color: '#2d3748', width: 2 }
+                },
+                text: [
+                  result.formatted.directImpact,
+                  result.formatted.lostProductivity,
+                  result.formatted.totalEconomicImpact
+                ],
+                textposition: 'auto',
+                hovertemplate: '<b>%{x}</b><br>Amount: %{text}<extra></extra>'
+              }]}
+              layout={{
+                title: {
+                  text: 'Economic Impact Breakdown',
+                  font: { color: '#e4e6eb', size: 16 }
+                },
+                paper_bgcolor: '#1e2530',
+                plot_bgcolor: '#0f1419',
+                font: { color: '#e4e6eb' },
+                height: 350,
+                margin: { t: 60, b: 60, l: 80, r: 40 },
+                xaxis: {
+                  gridcolor: '#2d3748',
+                  color: '#b8bcc8'
+                },
+                yaxis: {
+                  title: { text: 'Billions ($)', font: { color: '#e4e6eb' } },
+                  gridcolor: '#2d3748',
+                  color: '#b8bcc8'
+                },
+                showlegend: false
+              }}
+              config={{
+                displayModeBar: true,
+                displaylogo: false,
+                responsive: true,
+                toImageButtonOptions: {
+                  format: 'png',
+                  filename: 'impact_breakdown',
+                  height: 600,
+                  width: 1000,
+                  scale: 2
+                }
+              }}
+              style={{ width: '100%', height: '100%' }}
+            />
+          </div>
 
-            <div className="card">
-              <div className="card-body text-center">
-                <h3 style={{
-                  fontSize: '2rem',
-                  color: 'var(--color-accent-purple)',
-                  marginBottom: 'var(--spacing-sm)'
-                }}>
-                  {result.formatted.gdpImpact}
-                </h3>
-                <p style={{
-                  fontSize: '0.875rem',
-                  color: 'var(--color-text-muted)',
-                  marginBottom: 0
-                }}>
-                  GDP Impact
-                </p>
-              </div>
-            </div>
+          {/* GDP Impact Indicator */}
+          <div style={{ 
+            background: 'var(--color-bg-tertiary)', 
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--spacing-sm)',
+            marginBottom: 'var(--spacing-lg)'
+          }}>
+            <Plot
+              data={[{
+                type: 'indicator' as const,
+                mode: 'gauge+number' as const,
+                value: parseFloat(result.impacts.gdpImpactPercent),
+                title: { text: 'GDP Impact (%)', font: { size: 18, color: '#e4e6eb' } },
+                number: { suffix: '%', font: { size: 32, color: '#8b5cf6' } },
+                gauge: {
+                  shape: 'bullet',
+                  axis: { range: [null, 0.5], tickcolor: '#b8bcc8' },
+                  bar: { color: '#8b5cf6' },
+                  bgcolor: '#0f1419',
+                  borderwidth: 2,
+                  bordercolor: '#2d3748',
+                  steps: [
+                    { range: [0, 0.1], color: 'rgba(139, 92, 246, 0.2)' },
+                    { range: [0.1, 0.3], color: 'rgba(139, 92, 246, 0.3)' },
+                    { range: [0.3, 0.5], color: 'rgba(139, 92, 246, 0.4)' }
+                  ],
+                  threshold: {
+                    line: { color: '#ec4899', width: 4 },
+                    thickness: 0.75,
+                    value: 0.4
+                  }
+                }
+              }]}
+              layout={{
+                paper_bgcolor: '#1e2530',
+                plot_bgcolor: '#1e2530',
+                font: { color: '#e4e6eb' },
+                height: 200,
+                margin: { t: 50, b: 20, l: 100, r: 100 }
+              }}
+              config={{ displayModeBar: false, responsive: true }}
+              style={{ width: '100%', height: '100%' }}
+            />
           </div>
 
           <div style={{

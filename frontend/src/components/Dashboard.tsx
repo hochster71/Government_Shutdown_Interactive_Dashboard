@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Timeline from './Timeline'
 import SankeyDiagram from './SankeyDiagram'
 import ImpactCalculator from './ImpactCalculator'
+import NetworkGraph from './NetworkGraph'
 import SourceCitations from './SourceCitations'
 import { fetchShutdowns, fetchNews, sanitizeString } from '../utils/api'
 import { logger } from '../utils/logger'
@@ -9,6 +10,7 @@ import { logger } from '../utils/logger'
 /**
  * Dashboard Component
  * Main container for all dashboard widgets and visualizations
+ * Enhanced with advanced visualization libraries: Plotly, Sigma.js
  */
 
 interface ShutdownData {
@@ -35,7 +37,7 @@ function Dashboard() {
   const [news, setNews] = useState<NewsArticle[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'timeline' | 'sankey' | 'calculator'>('timeline')
+  const [activeTab, setActiveTab] = useState<'timeline' | 'sankey' | 'network' | 'calculator'>('timeline')
 
   useEffect(() => {
     fetchData()
@@ -195,6 +197,13 @@ function Dashboard() {
             🔄 Sankey Diagram
           </button>
           <button
+            className={`btn tab-button ${activeTab === 'network' ? 'btn-primary active' : 'btn-secondary'}`}
+            onClick={() => setActiveTab('network')}
+            style={{ borderRadius: 'var(--radius-md) var(--radius-md) 0 0' }}
+          >
+            🕸️ Network Graph
+          </button>
+          <button
             className={`btn tab-button ${activeTab === 'calculator' ? 'btn-primary active' : 'btn-secondary'}`}
             onClick={() => setActiveTab('calculator')}
             style={{ borderRadius: 'var(--radius-md) var(--radius-md) 0 0' }}
@@ -206,6 +215,7 @@ function Dashboard() {
         <div style={{ padding: 'var(--spacing-lg)' }}>
           {activeTab === 'timeline' && <Timeline shutdowns={shutdowns} />}
           {activeTab === 'sankey' && <SankeyDiagram shutdowns={shutdowns} />}
+          {activeTab === 'network' && <NetworkGraph shutdowns={shutdowns} />}
           {activeTab === 'calculator' && <ImpactCalculator />}
         </div>
       </div>

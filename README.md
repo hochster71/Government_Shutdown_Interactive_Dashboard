@@ -6,9 +6,10 @@ An interactive, dark-themed dashboard for visualizing and analyzing US Governmen
 
 ## Features
 
-- 📊 **Interactive Timeline**: Visualize all US government shutdowns with detailed information
-- 🔄 **Sankey Diagram**: Explore relationships between causes, affected agencies, and resolutions
-- 💰 **Impact Calculator**: Calculate and visualize economic impacts of shutdowns
+- 📊 **Interactive Timeline**: Powered by Plotly with zoom, pan, and advanced hover interactions
+- 🔄 **Sankey Diagram**: Flow analysis with Plotly for smooth animations and rich interactivity
+- 🕸️ **Network Graph**: WebGL-powered relationship visualization using Sigma.js
+- 💰 **Impact Calculator**: Advanced gauge charts and visualizations with Plotly
 - 📰 **Live News Feed**: Real-time news articles related to government shutdowns
 - ⏰ **Automated Updates**: Data refreshes every 6 hours to ensure latest information
 - 🎨 **Dark Theme**: Professional dark theme optimized for data visualization
@@ -19,11 +20,14 @@ An interactive, dark-themed dashboard for visualizing and analyzing US Governmen
 ### Frontend
 - **React** with TypeScript
 - **Vite** for fast development and building
-- **D3.js** for advanced data visualizations
+- **Plotly.js** for advanced interactive visualizations (Timeline, Sankey, Impact gauges)
+- **Sigma.js** for high-performance network graph rendering with WebGL
+- **Graphology** for graph data structures and algorithms
+- **D3.js** for foundational data manipulation
 - **Chart.js** for interactive charts
 - **DOMPurify** for XSS protection
 - **Axios** with centralized API client
-- Custom dark theme CSS
+- Custom dark theme CSS optimized for advanced visualizations
 
 ### Backend
 - **Node.js 18+** with Express
@@ -263,7 +267,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 - Data sourced from Wikipedia, NewsAPI, and GovInfo.gov
-- Built with React, D3.js, and Express
+- Built with React, Plotly.js, Sigma.js, and Express
+- Advanced visualizations powered by Plotly.js, Sigma.js, Graphology, and D3.js
 - Inspired by the need for transparent government data visualization
 
 ## Support
