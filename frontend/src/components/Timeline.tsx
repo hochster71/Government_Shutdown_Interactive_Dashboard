@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react'
-import * as d3 from 'd3'
+import { useMemo } from 'react'
+import Plot from 'react-plotly.js'
 
 /**
- * Timeline Component
+ * Timeline Component (Enhanced with Plotly)
  * Displays historical government shutdowns on an interactive timeline
+ * Uses Plotly for advanced interactivity, zoom, and animations
  */
 
 interface ShutdownData {
@@ -21,26 +22,8 @@ interface TimelineProps {
 }
 
 function Timeline({ shutdowns }: TimelineProps) {
-  const svgRef = useRef<SVGSVGElement>(null)
-
-  useEffect(() => {
-    if (!svgRef.current || shutdowns.length === 0) return
-
-    // Clear previous visualization
-    d3.select(svgRef.current).selectAll('*').remove()
-
-    const width = svgRef.current.clientWidth || 800
-    const height = 400
-    const margin = { top: 40, right: 40, bottom: 60, left: 60 }
-    const innerWidth = width - margin.left - margin.right
-    const innerHeight = height - margin.top - margin.bottom
-
-    const svg = d3.select(svgRef.current)
-      .attr('width', width)
-      .attr('height', height)
-
-    const g = svg.append('g')
-      .attr('transform', `translate(${margin.left},${margin.top})`)
+  const plotData = useMemo(() => {
+    if (shutdowns.length === 0) return []
 
     // Parse dates and prepare data
     const parseYear = (dateStr: string) => {
@@ -59,122 +42,66 @@ function Timeline({ shutdowns }: TimelineProps) {
       durationDays: parseDuration(s.duration)
     }))
 
-    // Create scales
-    const xScale = d3.scaleLinear()
-      .domain([d3.min(timelineData, d => d.year) || 1980, d3.max(timelineData, d => d.year) || 2024])
-      .range([0, innerWidth])
-
-    const yScale = d3.scaleLinear()
-      .domain([0, d3.max(timelineData, d => d.durationDays) || 40])
-      .range([innerHeight, 0])
-
-    // Add axes
-    const xAxis = d3.axisBottom(xScale)
-      .tickFormat(d => d.toString())
-      .ticks(10)
-
-    const yAxis = d3.axisLeft(yScale)
-      .ticks(5)
-
-    g.append('g')
-      .attr('transform', `translate(0,${innerHeight})`)
-      .call(xAxis)
-      .attr('color', '#b8bcc8')
-      .selectAll('text')
-      .style('font-size', '12px')
-
-    g.append('g')
-      .call(yAxis)
-      .attr('color', '#b8bcc8')
-      .selectAll('text')
-      .style('font-size', '12px')
-
-    // Add axis labels
-    g.append('text')
-      .attr('x', innerWidth / 2)
-      .attr('y', innerHeight + 45)
-      .attr('text-anchor', 'middle')
-      .attr('fill', '#e4e6eb')
-      .style('font-size', '14px')
-      .text('Year')
-
-    g.append('text')
-      .attr('transform', 'rotate(-90)')
-      .attr('x', -innerHeight / 2)
-      .attr('y', -45)
-      .attr('text-anchor', 'middle')
-      .attr('fill', '#e4e6eb')
-      .style('font-size', '14px')
-      .text('Duration (Days)')
-
-    // Create tooltip
-    const tooltip = d3.select('body')
-      .append('div')
-      .style('position', 'absolute')
-      .style('background', '#1e2530')
-      .style('padding', '12px')
-      .style('border-radius', '8px')
-      .style('border', '1px solid #2d3748')
-      .style('color', '#e4e6eb')
-      .style('font-size', '13px')
-      .style('pointer-events', 'none')
-      .style('opacity', 0)
-      .style('z-index', '1000')
-
-    // Add circles for each shutdown
-    g.selectAll('circle')
-      .data(timelineData)
-      .enter()
-      .append('circle')
-      .attr('cx', d => xScale(d.year))
-      .attr('cy', d => yScale(d.durationDays))
-      .attr('r', 0)
-      .attr('fill', '#4a9eff')
-      .attr('stroke', '#8b5cf6')
-      .attr('stroke-width', 2)
-      .attr('opacity', 0.8)
-      .style('cursor', 'pointer')
-      .on('mouseover', function(event, d) {
-        d3.select(this)
-          .transition()
-          .duration(200)
-          .attr('r', 10)
-          .attr('opacity', 1)
-
-        tooltip.transition()
-          .duration(200)
-          .style('opacity', 1)
-
-        tooltip.html(`
-          <strong>${d.date}</strong><br/>
-          Duration: ${d.duration}<br/>
-          President: ${d.president}<br/>
-          ${d.economicImpact ? `Impact: ${d.economicImpact}<br/>` : ''}
-          ${d.description.substring(0, 100)}...
-        `)
-          .style('left', (event.pageX + 15) + 'px')
-          .style('top', (event.pageY - 15) + 'px')
-      })
-      .on('mouseout', function() {
-        d3.select(this)
-          .transition()
-          .duration(200)
-          .attr('r', 6)
-          .attr('opacity', 0.8)
-
-        tooltip.transition()
-          .duration(200)
-          .style('opacity', 0)
-      })
-      .transition()
-      .duration(800)
-      .delay((_d, i) => i * 50)
-      .attr('r', 6)
-
-    // Cleanup tooltip on unmount
-    return () => {
-      tooltip.remove()
+    // Create scatter plot trace
+    const scatterTrace: any = {
+      x: timelineData.map(d => d.year),
+      y: timelineData.map(d => d.durationDays),
+      mode: 'markers',
+      type: 'scatter',
+      name: 'Shutdowns',
+      marker: {
+        size: timelineData.map(d => Math.max(8, d.durationDays / 2)),
+        color: timelineData.map(d => d.durationDays),
+        colorscale: [
+          [0, '#4a9eff'],
+          [0.5, '#8b5cf6'],
+          [1, '#ec4899']
+        ],
+        showscale: true,
+        colorbar: {
+          title: 'Duration<br>(Days)',
+          titlefont: { color: '#e4e6eb' },
+          tickfont: { color: '#b8bcc8' },
+          bgcolor: '#1e2530',
+          bordercolor: '#2d3748',
+          borderwidth: 1
+        },
+        line: {
+          color: '#8b5cf6',
+          width: 2
+        },
+        opacity: 0.85
+      },
+      text: timelineData.map(d => 
+        `<b>${d.date}</b><br>` +
+        `Duration: ${d.duration}<br>` +
+        `President: ${d.president}<br>` +
+        `${d.economicImpact ? `Impact: ${d.economicImpact}<br>` : ''}` +
+        `${d.description.substring(0, 150)}...`
+      ),
+      hovertemplate: '%{text}<extra></extra>',
     }
+
+    // Add trend line
+    const years = timelineData.map(d => d.year)
+    const durations = timelineData.map(d => d.durationDays)
+    const avgDuration = durations.reduce((a, b) => a + b, 0) / durations.length
+    
+    const trendTrace: any = {
+      x: [Math.min(...years), Math.max(...years)],
+      y: [avgDuration, avgDuration],
+      mode: 'lines',
+      type: 'scatter',
+      name: 'Average Duration',
+      line: {
+        color: '#10b981',
+        width: 2,
+        dash: 'dash'
+      },
+      hovertemplate: 'Average: %{y:.1f} days<extra></extra>'
+    }
+
+    return [scatterTrace, trendTrace]
   }, [shutdowns])
 
   if (shutdowns.length === 0) {
@@ -185,13 +112,77 @@ function Timeline({ shutdowns }: TimelineProps) {
     )
   }
 
+  const layout: any = {
+    title: {
+      text: 'Historical Shutdowns Timeline',
+      font: { color: '#e4e6eb', size: 18, family: 'Inter, sans-serif' },
+      x: 0.05
+    },
+    xaxis: {
+      title: { text: 'Year', font: { color: '#e4e6eb', size: 14 } },
+      gridcolor: '#2d3748',
+      color: '#b8bcc8',
+      zeroline: false
+    },
+    yaxis: {
+      title: { text: 'Duration (Days)', font: { color: '#e4e6eb', size: 14 } },
+      gridcolor: '#2d3748',
+      color: '#b8bcc8',
+      zeroline: false
+    },
+    plot_bgcolor: '#0f1419',
+    paper_bgcolor: '#1e2530',
+    hovermode: 'closest',
+    showlegend: true,
+    legend: {
+      font: { color: '#e4e6eb' },
+      bgcolor: '#1e2530',
+      bordercolor: '#2d3748',
+      borderwidth: 1,
+      x: 0.02,
+      y: 0.98
+    },
+    margin: { l: 60, r: 60, t: 60, b: 60 },
+    height: 500,
+    dragmode: 'zoom'
+  }
+
+  const config: any = {
+    displayModeBar: true,
+    displaylogo: false,
+    responsive: true,
+    modeBarButtonsToRemove: ['select2d', 'lasso2d'],
+    modeBarButtonsToAdd: ['hoverclosest', 'hovercompare'],
+    toImageButtonOptions: {
+      format: 'png',
+      filename: 'shutdown_timeline',
+      height: 800,
+      width: 1200,
+      scale: 2
+    }
+  }
+
   return (
     <div>
-      <h3 style={{ marginBottom: 'var(--spacing-md)' }}>Historical Shutdowns Timeline</h3>
+      <h3 style={{ marginBottom: 'var(--spacing-md)' }}>📊 Historical Shutdowns Timeline</h3>
       <p style={{ marginBottom: 'var(--spacing-lg)', color: 'var(--color-text-muted)' }}>
-        Interactive timeline showing duration and timing of US government shutdowns. Hover over points for details.
+        Interactive timeline with advanced controls. Zoom, pan, and hover for detailed information. Powered by Plotly.
       </p>
-      <svg ref={svgRef} style={{ width: '100%', height: '400px' }}></svg>
+      
+      <div style={{ 
+        background: 'var(--color-bg-tertiary)', 
+        borderRadius: 'var(--radius-md)',
+        padding: 'var(--spacing-sm)',
+        marginBottom: 'var(--spacing-lg)'
+      }}>
+        <Plot
+          data={plotData}
+          layout={layout}
+          config={config}
+          style={{ width: '100%', height: '100%' }}
+          useResizeHandler={true}
+        />
+      </div>
       
       {/* Shutdown List */}
       <div style={{ marginTop: 'var(--spacing-xl)' }}>

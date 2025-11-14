@@ -1,10 +1,10 @@
-import { useEffect, useRef } from 'react'
-import * as d3 from 'd3'
-import { sankey, sankeyLinkHorizontal, SankeyNode } from 'd3-sankey'
+import { useMemo } from 'react'
+import Plot from 'react-plotly.js'
 
 /**
- * Sankey Diagram Component
+ * Sankey Diagram Component (Enhanced with Plotly)
  * Visualizes flow relationships between shutdown causes, agencies, and resolutions
+ * Uses Plotly for advanced interactivity and smooth animations
  */
 
 interface ShutdownData {
@@ -20,45 +20,27 @@ interface SankeyDiagramProps {
   shutdowns: ShutdownData[]
 }
 
-interface CustomNode {
-  name: string
-  category?: string
-}
-
-interface CustomLink {
-  source: number
-  target: number
-  value: number
-}
-
 function SankeyDiagram({ shutdowns }: SankeyDiagramProps) {
-  const svgRef = useRef<SVGSVGElement>(null)
-
-  useEffect(() => {
-    if (!svgRef.current || shutdowns.length === 0) return
-
-    // Clear previous visualization
-    d3.select(svgRef.current).selectAll('*').remove()
-
-    const width = svgRef.current.clientWidth || 800
-    const height = 500
-    const margin = { top: 20, right: 20, bottom: 20, left: 20 }
-
-    // Prepare Sankey data
-    const nodes: CustomNode[] = []
-    const links: CustomLink[] = []
+  const plotData = useMemo(() => {
+    if (shutdowns.length === 0) return []
 
     // Define categories
     const causes = ['Budget Dispute', 'Policy Disagreement', 'Partisan Conflict']
     const agencies = ['Multiple Agencies', 'National Parks', 'NASA', 'Department of Defense']
     const resolutions = ['Compromise Reached', 'Continuing Resolution', 'Budget Passed']
 
-    // Add nodes
-    causes.forEach(c => nodes.push({ name: c, category: 'cause' }))
-    agencies.forEach(a => nodes.push({ name: a, category: 'agency' }))
-    resolutions.forEach(r => nodes.push({ name: r, category: 'resolution' }))
+    // Create node list
+    const allNodes = [...causes, ...agencies, ...resolutions]
+    
+    // Create links
+    const linkSource: number[] = []
+    const linkTarget: number[] = []
+    const linkValue: number[] = []
+    const linkColor: string[] = []
 
-    // Create links based on shutdown data (simplified model)
+    // Track link counts
+    const linkCounts = new Map<string, number>()
+
     shutdowns.forEach((shutdown) => {
       // Link cause to agency
       const causeIdx = Math.floor(Math.random() * causes.length)
@@ -69,89 +51,64 @@ function SankeyDiagram({ shutdowns }: SankeyDiagramProps) {
         : 0)
       const resolutionIdx = causes.length + agencies.length + Math.floor(Math.random() * resolutions.length)
 
-      // Add or update links
-      const link1 = links.find(l => l.source === causeIdx && l.target === agencyIdx)
-      if (link1) {
-        link1.value += 1
-      } else {
-        links.push({ source: causeIdx, target: agencyIdx, value: 1 })
-      }
+      // Link 1: Cause to Agency
+      const key1 = `${causeIdx}-${agencyIdx}`
+      linkCounts.set(key1, (linkCounts.get(key1) || 0) + 1)
 
-      const link2 = links.find(l => l.source === agencyIdx && l.target === resolutionIdx)
-      if (link2) {
-        link2.value += 1
+      // Link 2: Agency to Resolution
+      const key2 = `${agencyIdx}-${resolutionIdx}`
+      linkCounts.set(key2, (linkCounts.get(key2) || 0) + 1)
+    })
+
+    // Convert map to arrays
+    linkCounts.forEach((value, key) => {
+      const [source, target] = key.split('-').map(Number)
+      linkSource.push(source)
+      linkTarget.push(target)
+      linkValue.push(value)
+      
+      // Color based on flow stage
+      if (source < causes.length) {
+        linkColor.push('rgba(74, 158, 255, 0.4)') // Cause to Agency - blue
       } else {
-        links.push({ source: agencyIdx, target: resolutionIdx, value: 1 })
+        linkColor.push('rgba(139, 92, 246, 0.4)') // Agency to Resolution - purple
       }
     })
 
-    // Create Sankey generator
-    const sankeyGenerator = sankey<CustomNode, CustomLink>()
-      .nodeWidth(15)
-      .nodePadding(20)
-      .extent([[margin.left, margin.top], [width - margin.right, height - margin.bottom]])
+    // Node colors
+    const nodeColors = [
+      ...Array(causes.length).fill('#4a9eff'),      // Causes - blue
+      ...Array(agencies.length).fill('#8b5cf6'),    // Agencies - purple
+      ...Array(resolutions.length).fill('#10b981')  // Resolutions - green
+    ]
 
-    // Generate Sankey layout
-    const graph = sankeyGenerator({
-      nodes: nodes.map(d => ({ ...d })),
-      links: links.map(d => ({ ...d }))
-    })
-
-    const svg = d3.select(svgRef.current)
-      .attr('width', width)
-      .attr('height', height)
-
-    // Color scale for categories
-    const colorScale = d3.scaleOrdinal()
-      .domain(['cause', 'agency', 'resolution'])
-      .range(['#4a9eff', '#8b5cf6', '#10b981'])
-
-    // Add links
-    svg.append('g')
-      .selectAll('path')
-      .data(graph.links)
-      .enter()
-      .append('path')
-      .attr('d', sankeyLinkHorizontal())
-      .attr('stroke', '#4a9eff')
-      .attr('stroke-width', d => Math.max(1, d.width || 0))
-      .attr('fill', 'none')
-      .attr('opacity', 0.3)
-      .on('mouseover', function() {
-        d3.select(this).attr('opacity', 0.6)
-      })
-      .on('mouseout', function() {
-        d3.select(this).attr('opacity', 0.3)
-      })
-
-    // Add nodes
-    const node = svg.append('g')
-      .selectAll('rect')
-      .data(graph.nodes)
-      .enter()
-      .append('g')
-
-    node.append('rect')
-      .attr('x', d => (d as SankeyNode<CustomNode, CustomLink>).x0 || 0)
-      .attr('y', d => (d as SankeyNode<CustomNode, CustomLink>).y0 || 0)
-      .attr('height', d => ((d as SankeyNode<CustomNode, CustomLink>).y1 || 0) - ((d as SankeyNode<CustomNode, CustomLink>).y0 || 0))
-      .attr('width', d => ((d as SankeyNode<CustomNode, CustomLink>).x1 || 0) - ((d as SankeyNode<CustomNode, CustomLink>).x0 || 0))
-      .attr('fill', d => colorScale((d as SankeyNode<CustomNode, CustomLink>).category || 'default') as string)
-      .attr('opacity', 0.8)
-      .attr('stroke', '#1e2530')
-      .attr('stroke-width', 2)
-
-    // Add labels
-    node.append('text')
-      .attr('x', d => (((d as SankeyNode<CustomNode, CustomLink>).x0 || 0) < width / 2) ? ((d as SankeyNode<CustomNode, CustomLink>).x1 || 0) + 6 : ((d as SankeyNode<CustomNode, CustomLink>).x0 || 0) - 6)
-      .attr('y', d => (((d as SankeyNode<CustomNode, CustomLink>).y1 || 0) + ((d as SankeyNode<CustomNode, CustomLink>).y0 || 0)) / 2)
-      .attr('dy', '0.35em')
-      .attr('text-anchor', d => (((d as SankeyNode<CustomNode, CustomLink>).x0 || 0) < width / 2) ? 'start' : 'end')
-      .attr('fill', '#e4e6eb')
-      .style('font-size', '12px')
-      .style('font-weight', '500')
-      .text(d => (d as SankeyNode<CustomNode, CustomLink>).name)
-
+    return [{
+      type: 'sankey' as const,
+      orientation: 'h' as const,
+      node: {
+        pad: 20,
+        thickness: 25,
+        line: {
+          color: '#2d3748',
+          width: 2
+        },
+        label: allNodes,
+        color: nodeColors,
+        customdata: allNodes.map((_node, idx) => {
+          if (idx < causes.length) return 'Cause'
+          if (idx < causes.length + agencies.length) return 'Affected Agency'
+          return 'Resolution'
+        }),
+        hovertemplate: '<b>%{label}</b><br>Category: %{customdata}<br>Total Flow: %{value}<extra></extra>'
+      },
+      link: {
+        source: linkSource,
+        target: linkTarget,
+        value: linkValue,
+        color: linkColor,
+        hovertemplate: 'Flow: %{value} shutdowns<extra></extra>'
+      }
+    }]
   }, [shutdowns])
 
   if (shutdowns.length === 0) {
@@ -162,11 +119,41 @@ function SankeyDiagram({ shutdowns }: SankeyDiagramProps) {
     )
   }
 
+  const layout: any = {
+    title: {
+      text: 'Shutdown Flow Analysis',
+      font: { color: '#e4e6eb', size: 18, family: 'Inter, sans-serif' },
+      x: 0.05
+    },
+    font: {
+      size: 12,
+      color: '#e4e6eb'
+    },
+    plot_bgcolor: '#0f1419',
+    paper_bgcolor: '#1e2530',
+    margin: { l: 20, r: 20, t: 60, b: 20 },
+    height: 600
+  }
+
+  const config: any = {
+    displayModeBar: true,
+    displaylogo: false,
+    responsive: true,
+    modeBarButtonsToRemove: ['select2d', 'lasso2d', 'zoom2d', 'pan2d', 'zoomIn2d', 'zoomOut2d', 'autoScale2d'],
+    toImageButtonOptions: {
+      format: 'png',
+      filename: 'shutdown_sankey',
+      height: 800,
+      width: 1200,
+      scale: 2
+    }
+  }
+
   return (
     <div>
-      <h3 style={{ marginBottom: 'var(--spacing-md)' }}>Shutdown Flow Analysis</h3>
+      <h3 style={{ marginBottom: 'var(--spacing-md)' }}>🔄 Shutdown Flow Analysis</h3>
       <p style={{ marginBottom: 'var(--spacing-lg)', color: 'var(--color-text-muted)' }}>
-        Sankey diagram showing relationships between shutdown causes, affected agencies, and resolutions.
+        Interactive Sankey diagram showing relationships between shutdown causes, affected agencies, and resolutions. Powered by Plotly.
       </p>
 
       <div style={{ 
@@ -204,7 +191,20 @@ function SankeyDiagram({ shutdowns }: SankeyDiagramProps) {
         </div>
       </div>
 
-      <svg ref={svgRef} style={{ width: '100%', height: '500px' }}></svg>
+      <div style={{ 
+        background: 'var(--color-bg-tertiary)', 
+        borderRadius: 'var(--radius-md)',
+        padding: 'var(--spacing-sm)',
+        marginBottom: 'var(--spacing-lg)'
+      }}>
+        <Plot
+          data={plotData}
+          layout={layout}
+          config={config}
+          style={{ width: '100%', height: '100%' }}
+          useResizeHandler={true}
+        />
+      </div>
 
       <div className="alert alert-info" style={{ marginTop: 'var(--spacing-lg)' }}>
         <strong>Note:</strong> This visualization represents simplified relationships based on historical shutdown data.
